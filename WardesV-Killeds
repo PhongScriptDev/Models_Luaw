@@ -1,0 +1,239 @@
+-- ============================================
+--  WHITELIST PRO + AUTO RE-CHECK + AUTO F9
+--  Format: [Universe ID] = "raw url"
+-- ============================================
+
+local Players      = game:GetService("Players")
+local StarterGui   = game:GetService("StarterGui")
+local SoundService = game:GetService("SoundService")
+local VIM          = game:GetService("VirtualInputManager")
+local LocalPlayer  = Players.LocalPlayer
+
+-- ⚙️ CẤU HÌNH
+local MUSIC_ID     = "rbxassetid://1837879082"
+local DEBUG        = true
+local RECHECK_TIME = 10 -- giây
+
+-- 📋 Danh sách hỗ trợ
+local SUPPORTED_GAMES = {
+    [994732206]  = "none",
+    [6162020898] = "https://raw.githubusercontent.com/yourname/hub/main/evade.lua",
+}
+
+-- ============================
+-- 🖥️ MÔ PHỎNG F9 (MỞ CONSOLE ROBLOX)
+-- ============================
+local function openRobloxConsole()
+    local ok, err = pcall(function()
+        -- Gửi keydown F9
+        VIM:SendKeyEvent(true, Enum.KeyCode.F9, false, game)
+        task.wait(0.1)
+        -- Gửi keyup F9
+        VIM:SendKeyEvent(false, Enum.KeyCode.F9, false, game)
+    end)
+
+    if ok then
+        print("[F9] Đã gửi phím F9 mở Console")
+    else
+        warn("[F9] Không mô phỏng được F9:", err)
+    end
+
+    return ok
+end
+
+-- ============================
+-- 🔧 HÀM LOG
+-- ============================
+local function log(tag, ...)
+    if not DEBUG then return end
+    print("["..tag:upper().."]", ...)
+end
+
+-- ============================
+-- 🔔 NOTIFY
+-- ============================
+local function notify(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title or "Thông báo",
+            Text = text or "",
+            Duration = duration or 5,
+        })
+    end)
+end
+
+-- ============================
+-- 🎵 NHẠC
+-- ============================
+local function playMusic()
+    pcall(function()
+        local s = Instance.new("Sound")
+        s.SoundId = MUSIC_ID
+        s.Volume = 0.5
+        s.Parent = SoundService
+        s:Play()
+        s.Ended:Connect(function() s:Destroy() end)
+    end)
+end
+
+-- ============================
+-- 🎯 TRẠNG THÁI
+-- ============================
+local STATE = {
+    lastId     = nil,
+    loadedId   = nil,
+    isRunning  = true,
+    checkCount = 0,
+    startTime  = os.time(),
+}
+
+-- ============================
+-- 🔍 LẤY UNIVERSE ID
+-- ============================
+local function getUniverseId()
+    if not game:IsLoaded() then
+        log("info", "Đợi game load...")
+        local loaded = false
+        task.spawn(function()
+            game.Loaded:Wait()
+            loaded = true
+        end)
+        local t = 0
+        while not loaded and t < 10 do
+            task.wait(0.2)
+            t = t + 0.2
+        end
+    end
+
+    local maxWait = 30
+    local waited = 0
+    while waited < maxWait do
+        local id = game.GameId
+        if id and id ~= 0 then return id end
+        task.wait(0.5)
+        waited = waited + 0.5
+    end
+    return 0
+end
+
+-- ============================
+-- 🚀 XỬ LÝ CHECK
+-- ============================
+local function processCheck(isFirstTime)
+    local universeId = getUniverseId()
+
+    log("check", "Bắt đầu check #"..STATE.checkCount)
+    log("check", "Universe ID:", universeId)
+
+    if universeId == 0 then
+        log("error", "Không đọc được Universe ID!")
+        if isFirstTime then
+            notify("⚠️ Lỗi", "Không đọc được Universe ID!", 8)
+        end
+        return
+    end
+
+    if STATE.lastId == universeId then
+        log("info", "ID không đổi ("..universeId.."), bỏ qua")
+        return
+    end
+
+    log("info", "ID mới phát hiện:", universeId)
+    STATE.lastId = universeId
+
+    local url = SUPPORTED_GAMES[universeId]
+
+    if not url then
+        log("warn", "ID "..universeId.." KHÔNG có trong bảng hỗ trợ")
+        notify(
+            "❗ Không phải game",
+            "❌ Từ chối loading\nUniverse ID: "..tostring(universeId),
+            8
+        )
+        STATE.loadedId = nil
+        return
+    end
+
+    log("success", "ID "..universeId.." CÓ trong bảng hỗ trợ")
+
+    if STATE.loadedId == universeId then
+        log("info", "Đã load ID "..universeId.." rồi, bỏ qua")
+        return
+    end
+
+    notify("✔️ Game hỗ trợ", "⏳ Đang loading script...", 5)
+    task.wait(2)
+
+    log("load", "Đang tải script từ:", url)
+
+    local ok, err = pcall(function()
+        local code = game:HttpGet(url)
+        if not code or #code < 10 then
+            error("Link rỗng hoặc lỗi 404")
+        end
+        loadstring(code)()
+    end)
+
+    if ok then
+        STATE.loadedId = universeId
+        log("success", "Đã load thành công ID:", universeId)
+    else
+        log("error", "Lỗi load:", err)
+        notify("❌ Lỗi tải script", tostring(err), 8)
+    end
+end
+
+-- ============================
+-- 🚀 MAIN
+-- ============================
+
+-- 1. TỰ ĐỘNG MỞ F9
+openRobloxConsole()
+task.wait(0.5)
+
+-- 2. Nhạc
+playMusic()
+log("info", "Đã phát nhạc khởi động")
+
+-- 3. Đếm bảng
+local count = 0
+for _ in pairs(SUPPORTED_GAMES) do count = count + 1 end
+log("info", "Số game trong bảng hỗ trợ:", count)
+
+if count == 0 then
+    log("error", "Bảng SUPPORTED_GAMES rỗng!")
+    notify("⚠️ Lỗi cấu hình", "Bảng SUPPORTED_GAMES đang rỗng!", 8)
+    return
+end
+
+-- 4. In danh sách hỗ trợ
+log("info", "=== DANH SÁCH HỖ TRỢ ===")
+for id, url in pairs(SUPPORTED_GAMES) do
+    log("info", "🎮 "..id.." -> "..url:sub(1, 50).."...")
+end
+
+-- 5. Notify bắt đầu
+notify(
+    "🔎 Đang kiểm tra Universe ID...",
+    "🕑 Xin vui lòng đợi, để kiểm tra có phải game hỗ trợ?",
+    5
+)
+
+task.wait(4)
+
+-- 6. Check lần đầu
+STATE.checkCount = STATE.checkCount + 1
+processCheck(true)
+
+-- 7. Loop re-check
+task.spawn(function()
+    while STATE.isRunning do
+        task.wait(RECHECK_TIME)
+        STATE.checkCount = STATE.checkCount + 1
+        pcall(function()
+            processCheck(false)
+        end)
+    end
+end)
+
+log("info", "Đã bật auto re-check mỗi "..RECHECK_TIME.." giây")
