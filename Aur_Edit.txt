@@ -138,19 +138,16 @@ task.spawn(function()
         )
         pcall(function() userInfoText:SetDesc(userInfo) end)
 
-        -- Hardware (Network)
-        local networkStats = game:GetService("Stats").Network
-        local sendKbps, recvKbps = 0, 0
-        pcall(function()
-            sendKbps = networkStats:FindFirstChild("DataSent") and networkStats.DataSent:GetValue() or 0
-            recvKbps = networkStats:FindFirstChild("DataReceived") and networkStats.DataReceived:GetValue() or 0
-        end)
 
-        local hardwareInfo = string.format(
-            "FPS: %s\nPing: %s\nGPU: %s\nCPU: %s\nNetwork: %.2f KB/s - %.2f KB/s %s",
-            tostring(fpsVal), tostring(pingVal), tostring(gpuVal), tostring(cpuVal), sendKbps, recvKbps, dots
-        )
-        pcall(function() hardwareText:SetDesc(hardwareInfo) end)
+-- Hardware (Network)
+local sendKbps = _G.netSend or "0.00"
+local recvKbps = _G.netRecv or "0.00"
+
+local hardwareInfo = string.format(
+    "FPS: %s\nPing: %s\nGPU: %s\nCPU: %s\nNetwork: %s KB/s - %s KB/s %s",
+    tostring(fpsVal), tostring(pingVal), tostring(gpuVal), tostring(cpuVal), sendKbps, recvKbps, dots
+)
+pcall(function() hardwareText:SetDesc(hardwareInfo) end)
     end
 end)
 
