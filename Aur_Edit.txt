@@ -7,7 +7,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 -- ============================================================
 -- ===== CẤU HÌNH AUTO EXECUTE ================================
 -- ============================================================
-local AUTO_EXECUTE_URL = "https://luauforge-antiraw.netlify.app/raw/toiyeumeban-uXFWD85bBucc6Uee8PplRAJ"
+local AUTO_EXECUTE_URL = "https://raw.githubusercontent.com/PhongScriptDev/Models_Luaw/refs/heads/main/Aur_Edit.txt"
 local AUTO_EXECUTE_CMD = [[loadstring(game:HttpGet("]] .. AUTO_EXECUTE_URL .. [["))()]]
 
 pcall(function()
