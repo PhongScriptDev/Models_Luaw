@@ -288,6 +288,51 @@ end)
 -- ===== ĐẾM FPS / CPU / PING / GPU ===========================
 -- ============================================================
 local currentFps, currentCpu, currentPing, currentGpu = 60, "N/A", "N/A", "N/A"
+_G.currentFps, _G.currentCpu, _G.currentPing, _G.currentGpu = 60, "N/A", "N/A", "N/A"
+
+task.spawn(function()
+    local frameCount, lastTime = 0, tick()
+    game:GetService("RunService").Heartbeat:Connect(function()
+        frameCount = frameCount + 1
+        local now = tick()
+        if now - lastTime >= 1 then
+            currentFps = math.floor(frameCount / (now - lastTime) + 0.5)
+            frameCount, lastTime = 0, now
+            currentCpu = math.clamp(math.floor((1 - (currentFps / 60)) * 100), 0, 100) .. "%"
+            currentGpu = math.clamp(math.floor((1 - (currentFps / 60)) * 80), 0, 100) .. "%"
+            
+            -- CẬP NHẬT BIẾN TOÀN CỤC CHO TAB MAIN/USER
+            _G.currentFps = currentFps
+            _G.currentCpu = currentCpu
+            _G.currentGpu = currentGpu
+        end
+    end)
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+            currentPing = math.floor(ping) .. "ms"
+            
+            -- CẬP NHẬT BIẾN TOÀN CỤC CHO TAB MAIN/USER
+            _G.currentPing = currentPing
+        end)
+    end
+end)
+
+-- Lấy dữ liệu Network KB/s thực tế
+task.spawn(function()
+    local net = game:GetService("Stats").Network
+    while task.wait(1) do
+        pcall(function()
+            local send = net.DataSent:GetValue() / 1024
+            local recv = net.DataReceived:GetValue() / 1024
+            _G.netSend = string.format("%.2f", send)
+            _G.netRecv = string.format("%.2f", recv)
+        end)
+    end
+end)
 
 task.spawn(function()
     local frameCount, lastTime = 0, tick()
