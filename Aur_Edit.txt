@@ -1,14 +1,17 @@
 -- ===== SCRIPT FARM EVADE - WINDUI EDITION =====
--- Version: 11.3.0 - Auto Reconnect + Auto Execute Bật Sẵn
+-- Version: 12.2.0 - Fix Text + Fix Rejoin GUI + Auto Clear Old Click
 -- Copy toàn bộ vào executor
 
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 -- ============================================================
--- ===== CẤU HÌNH AUTO EXECUTE ================================
+-- ===== CẤU HÌNH =============================================
 -- ============================================================
 local AUTO_EXECUTE_URL = "https://raw.githubusercontent.com/PhongScriptDev/Models_Luaw/refs/heads/main/Aur_Edit.txt"
 local AUTO_EXECUTE_CMD = [[loadstring(game:HttpGet("]] .. AUTO_EXECUTE_URL .. [["))()]]
+local FOLDER_NAME = "Mẹ mày béo"
+local EXECUTE_FILE = FOLDER_NAME .. "/Execute.txt"
+local LOCATION_FILE = FOLDER_NAME .. "/ClickLocation.txt"
 
 pcall(function()
     game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(false)
@@ -38,8 +41,8 @@ local TeleportWithEmote, IsOnWall
 local FormatTime
 
 local Window = WindUI:CreateWindow({
-    Title = "Aur_Edit Hub",
-    Author = "Created by: Aur_Zini",
+    Title = "Aur_Meow Hub",
+    Author = "Created by: Mẹ Mày Béo",
     Folder = "EvadeFarm",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -47,6 +50,12 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 200,
     HideSearchBar = true,
 })
+
+-- ============================================================
+-- ===== WINDUI CONFIG MANAGER ================================
+-- ============================================================
+local ConfigManager = Window.ConfigManager
+local myConfig = ConfigManager:CreateConfig("EvadeFarmConfig")
 
 pcall(function()
     local s = Instance.new("Sound")
@@ -58,6 +67,44 @@ pcall(function()
 end)
 
 local farmTab = Window:Tab({ Title = "Event Farm", Icon = "gamepad-2" })
+
+-- ============================================================
+-- ===== CÁC HÀM XỬ LÝ FILE ===================================
+-- ============================================================
+local function EnsureFolder()
+    if type(makefolder) == "function" and type(isfolder) == "function" then
+        if not isfolder(FOLDER_NAME) then pcall(function() makefolder(FOLDER_NAME) end) end
+    end
+end
+
+local function SaveClickLocation(x, y)
+    EnsureFolder()
+    pcall(function() writefile(LOCATION_FILE, tostring(x) .. "," .. tostring(y)) end)
+end
+
+local function LoadClickLocation()
+    if type(isfile) == "function" and isfile(LOCATION_FILE) then
+        local success, content = pcall(readfile, LOCATION_FILE)
+        if success and content then
+            local x, y = string.match(content, "([^,]+),([^,]+)")
+            if x and y then return tonumber(x), tonumber(y) end
+        end
+    end
+    return nil, nil
+end
+
+local function DeleteClickLocation()
+    if type(delfile) == "function" and type(isfile) == "function" and isfile(LOCATION_FILE) then
+        pcall(function() delfile(LOCATION_FILE) end)
+        return true
+    end
+    return false
+end
+
+local function SaveExecuteFile()
+    EnsureFolder()
+    pcall(function() writefile(EXECUTE_FILE, AUTO_EXECUTE_CMD) end)
+end
 
 -- ============================================================
 -- ===== LOGIC CHECK LOBBY ====================================
@@ -116,7 +163,7 @@ end
 local function StartAntiAfkLoop()
     if antiAfkLoopRunning or not antiAfkEnabled then return end
     antiAfkLoopRunning = true
-    WindUI:Notify({ Title = "📊 Anti AFK - Proactive mechanism", Content = "✔️ Đã kích hoạt cơ chế anti afk", Duration = 5 })
+    WindUI:Notify({ Title = "📊 Anti AFK", Content = "✔️ Đã kích hoạt", Duration = 5 })
     task.spawn(function()
         while antiAfkEnabled and GetActualAfkTime() >= antiAfkDelayThreshold do
             task.wait(math.random(1, 10))
@@ -238,39 +285,6 @@ end
 local function SetFarmEventStatus(text) farmEventStatusText = text end
 local function SetFarmLvStatus(text) farmLvStatusText = text end
 local function SetFarmTokenStatus(text) farmTokenStatusText = text end
-
--- ============================================================
--- ===== HỆ THỐNG BACKUP ======================================
--- ============================================================
-local autoExecuteBackupEnabled = false
-local autoReconnectEnabled = false
-local FOLDER_NAME = "Mẹ mày béo"
-local EXECUTE_FILE = FOLDER_NAME .. "/Execute.txt"
-local BACKUP_FILE = FOLDER_NAME .. "/Backup.txt"
-local backupData = {}
-
-local function EnsureFolder()
-    if type(makefolder) == "function" and type(isfolder) == "function" then
-        if not isfolder(FOLDER_NAME) then pcall(function() makefolder(FOLDER_NAME) end) end
-    end
-end
-
-local function SaveBackupNow()
-    if not autoExecuteBackupEnabled then return end
-    EnsureFolder()
-    local success, encoded = pcall(function() return game:GetService("HttpService"):JSONEncode(backupData) end)
-    if success and encoded then pcall(function() writefile(BACKUP_FILE, encoded) end) end
-end
-
-local function LoadBackupFile()
-    if type(isfile) == "function" and isfile(BACKUP_FILE) then
-        local success, content = pcall(readfile, BACKUP_FILE)
-        if success and content and content ~= "" then
-            local decodeSuccess, data = pcall(function() return game:GetService("HttpService"):JSONDecode(content) end)
-            if decodeSuccess and type(data) == "table" then backupData = data end
-        end
-    end
-end
 
 -- ============================================================
 -- ===== ĐẾM ITEM & ESP =======================================
@@ -526,7 +540,7 @@ local function MarkUserActive()
     lastUserActionTime = tick()
     if antiAfkLoopRunning then
         antiAfkLoopRunning = false
-        WindUI:Notify({ Title = "📊 Anti AFK - Proactive mechanism", Content = "❌ Đã tắt anti-afk phát hiện thao tác", Duration = 3 })
+        WindUI:Notify({ Title = "📊 Anti AFK", Content = "❌ Đã tắt anti-afk", Duration = 3 })
     end
 end
 
@@ -942,43 +956,34 @@ local function StartAutoJoin()
     if autoJoinConn then pcall(function() autoJoinConn:Disconnect() end) end
     autoJoinEnabled = true
     local lastClickTime = 0
+    local clickX, clickY = LoadClickLocation()
+    
+    if not clickX or not clickY then
+        Notify("❌ Auto Join", "Chưa set location click! Hãy ấn nút 'Set location click' trước.", 5)
+        autoJoinEnabled = false
+        return
+    end
     
     autoJoinConn = game:GetService("RunService").RenderStepped:Connect(function()
         if not autoJoinEnabled then return end
-        local player = game.Players.LocalPlayer
-        local char = player.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local camera = workspace.CurrentCamera
-        
-        local isAlive = hrp and hum and hum.Health > 0
-        local dist = hrp and (hrp.Position - TARGET_XYZ).Magnitude or 99999
-        local isInLobby = (dist <= LOBBY_DISTANCE) or (not isAlive)
-
-        if isInLobby then
-            local currentTime = tick()
-            if currentTime - lastClickTime > 1.5 then
-                lastClickTime = currentTime
-                local camPos = camera.CFrame.Position
-                local lookDirection = (TARGET_XYZ - camPos).Unit
-                camera.CFrame = CFrame.lookAt(camPos, camPos + lookDirection)
-                isCameraForced = true
-                
-                task.spawn(function()
-                    task.wait(0.1)
-                    if not autoJoinEnabled then return end
-                    local viewportSize = camera.ViewportSize
-                    local VIM = game:GetService("VirtualInputManager")
-                    VIM:SendMouseButtonEvent(viewportSize.X / 2, viewportSize.Y / 2, 0, true, game, 0)
-                    task.wait(0.05)
-                    VIM:SendMouseButtonEvent(viewportSize.X / 2, viewportSize.Y / 2, 0, false, game, 0)
-                end)
-            end
-        else
-            if isCameraForced then
-                isCameraForced = false
-                pcall(function() camera.CameraType = Enum.CameraType.Custom end)
-            end
+        local currentTime = tick()
+        if currentTime - lastClickTime > 1.5 then
+            lastClickTime = currentTime
+            
+            local camera = workspace.CurrentCamera
+            local camPos = camera.CFrame.Position
+            local lookDirection = (TARGET_XYZ - camPos).Unit
+            camera.CFrame = CFrame.lookAt(camPos, camPos + lookDirection)
+            isCameraForced = true
+            
+            task.spawn(function()
+                task.wait(0.15)
+                if not autoJoinEnabled then return end
+                local VIM = game:GetService("VirtualInputManager")
+                VIM:SendMouseButtonEvent(clickX, clickY, 0, true, game, 0)
+                task.wait(0.05)
+                VIM:SendMouseButtonEvent(clickX, clickY, 0, false, game, 0)
+            end)
         end
     end)
 end
@@ -998,226 +1003,335 @@ end
 local antiPauseToggle = extraSection:Toggle({
     Title = "Anti Gameplay Pause",
     Desc = "Tắt thông báo pause + Auto AFK",
-    Value = backupData["AntiPause"] or true,
+    Value = true,
+    Flag = "AntiPause",
     Callback = function(value)
         if value then
             pcall(function() game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(false) end)
             antiAfkEnabled = true
             lastUserActionTime = tick()
-            Notify("✅ Anti Gameplay Pause", "Đã BẬT", 3)
         else
             pcall(function() game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(true) end)
             antiAfkEnabled = false
             antiAfkLoopRunning = false
-            Notify("❌ Anti Gameplay Pause", "Đã TẮT", 3)
         end
-        if autoExecuteBackupEnabled then backupData["AntiPause"] = value; SaveBackupNow() end
     end,
 })
 
 local autoJoinToggle = extraSection:Toggle({
     Title = "Auto Join (Lobby)",
-    Desc = "Tự động vào trận",
-    Value = backupData["AutoJoin"] or false,
+    Desc = "Tự động vào trận (dùng toạ độ đã ghim)",
+    Value = false,
+    Flag = "AutoJoin",
     Callback = function(state)
-        if state then StartAutoJoin(); Notify("✅ Auto Join", "Đã BẬT", 3)
-        else StopAutoJoin(); Notify("❌ Auto Join", "Đã TẮT", 3) end
-        if autoExecuteBackupEnabled then backupData["AutoJoin"] = state; SaveBackupNow() end
+        if state then StartAutoJoin() else StopAutoJoin() end
+    end,
+})
+
+-- NÚT SET LOCATION CLICK (CÓ TEST TOGGLE)
+extraSection:Button({
+    Title = "Set location click",
+    Desc = "Bấm để mở GUI ghim toạ độ click (có nút Test)",
+    Callback = function()
+        -- XOÁ CLICK CŨ (nếu có)
+        if DeleteClickLocation() then
+            Notify("🗑️ Đã xoá toạ độ cũ", "Toạ độ click cũ đã được xoá, hãy ghim lại!", 3)
+        end
+        
+        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        if not playerGui then return end
+        
+        local oldGui = playerGui:FindFirstChild("AutoLobbyGUI")
+        if oldGui then oldGui:Destroy() end
+        
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "AutoLobbyGUI"
+        screenGui.ResetOnSpawn = false
+        screenGui.IgnoreGuiInset = true
+        screenGui.Parent = playerGui
+
+        local mainFrame = Instance.new("Frame")
+        mainFrame.AnchorPoint = Vector2.new(1, 1)
+        mainFrame.Position = UDim2.new(1, -10, 1, -10)
+        mainFrame.Size = UDim2.new(0, 320, 0, 210)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        mainFrame.BorderSizePixel = 3
+        mainFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+        mainFrame.Parent = screenGui
+
+        local infoText = Instance.new("TextLabel")
+        infoText.Size = UDim2.new(1, -20, 0, 70)
+        infoText.Position = UDim2.new(0, 10, 0, 5)
+        infoText.BackgroundTransparency = 1
+        infoText.TextColor3 = Color3.fromRGB(0, 255, 0)
+        infoText.Font = Enum.Font.Code
+        infoText.TextSize = 14
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.Text = "BƯỚC 1: Click vào vị trí nút\n'Tham gia trò chơi' trên màn hình..."
+        infoText.Parent = mainFrame
+
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, -20, 0, 40)
+        clickBtn.Position = UDim2.new(0, 10, 0, 80)
+        clickBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        clickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        clickBtn.Font = Enum.Font.SourceSansBold
+        clickBtn.TextSize = 18
+        clickBtn.Text = "CHƯA GHIM"
+        clickBtn.Parent = mainFrame
+
+        local testBtn = Instance.new("TextButton")
+        testBtn.Size = UDim2.new(0.48, -15, 0, 40)
+        testBtn.Position = UDim2.new(0, 10, 0, 130)
+        testBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        testBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        testBtn.Font = Enum.Font.SourceSansBold
+        testBtn.TextSize = 16
+        testBtn.Text = "TEST CLICK"
+        testBtn.Parent = mainFrame
+
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Size = UDim2.new(0.48, -15, 0, 40)
+        saveBtn.Position = UDim2.new(0.52, 5, 0, 130)
+        saveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveBtn.Font = Enum.Font.SourceSansBold
+        saveBtn.TextSize = 16
+        saveBtn.Text = "LƯU & ĐÓNG"
+        saveBtn.Parent = mainFrame
+
+        local savedX, savedY = nil, nil
+        local savedWorldPos = nil
+        local UIS = game:GetService("UserInputService")
+        local GuiService = game:GetService("GuiService")
+        local Camera = workspace.CurrentCamera
+        
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        
+        local function cleanNum(n)
+            local str = string.format("%.2f", n)
+            str = str:gsub("0+$", "")
+            str = str:gsub("%.$", "")
+            return str
+        end
+        
+        UIS.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if not savedX and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                local mouseLoc = UIS:GetMouseLocation()
+                
+                savedX = mouseLoc.X
+                savedY = mouseLoc.Y
+                
+                if game.Players.LocalPlayer.Character then
+                    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character}
+                end
+                
+                local ray = Camera:ViewportPointToRay(savedX, savedY)
+                local hit = workspace:Raycast(ray.Origin, ray.Direction * 5000, raycastParams)
+                
+                if hit then
+                    savedWorldPos = hit.Position
+                else
+                    savedWorldPos = ray.Origin + ray.Direction * 500
+                end
+                
+                infoText.Text = string.format("ĐÃ GHIM:\nScreen: X=%.1f, Y=%.1f\nWorld: X=%s, Y=%s, Z=%s", 
+                    savedX, savedY,
+                    cleanNum(savedWorldPos.X), cleanNum(savedWorldPos.Y), cleanNum(savedWorldPos.Z))
+                    
+                clickBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+                clickBtn.Text = "ĐÃ GHIM (Click để đổi)"
+            end
+        end)
+        
+        testBtn.MouseButton1Click:Connect(function()
+            if not savedX or not savedY then
+                Notify("⚠️ Chưa ghim", "Hãy click vào màn hình để ghim toạ độ trước!", 3)
+                return
+            end
+            
+            if savedWorldPos then
+                local camPos = Camera.CFrame.Position
+                local lookDirection = (savedWorldPos - camPos).Unit
+                Camera.CFrame = CFrame.lookAt(camPos, camPos + lookDirection)
+            end
+            
+            task.wait(0.15)
+            
+            local VIM = game:GetService("VirtualInputManager")
+            VIM:SendMouseButtonEvent(savedX, savedY, 0, true, game, 0)
+            task.wait(0.05)
+            VIM:SendMouseButtonEvent(savedX, savedY, 0, false, game, 0)
+            
+            Notify("🖱️ Test Click", "Đã click tại X=" .. savedX .. ", Y=" .. savedY, 3)
+        end)
+        
+        saveBtn.MouseButton1Click:Connect(function()
+            if savedX and savedY then
+                SaveClickLocation(savedX, savedY)
+                Notify("✅ Đã lưu", "Toạ độ đã lưu vào " .. LOCATION_FILE, 4)
+                screenGui:Destroy()
+            else
+                Notify("⚠️ Chưa ghim", "Hãy click vào màn hình để ghim toạ độ trước!", 3)
+            end
+        end)
     end,
 })
 
 extraSection:Toggle({
-    Title = "Auto Execute + Backup",
-    Desc = "Tự động tạo thư mục 'Mẹ mày béo', lưu script và trạng thái",
-    Value = true, -- Bật sẵn
+    Title = "Auto Execute",
+    Desc = "Tự động lưu script và khởi động lại khi join server",
+    Value = true,
+    Flag = "AutoExecute",
     Callback = function(state)
-        autoExecuteBackupEnabled = state
         if state then
             EnsureFolder()
-            pcall(function() writefile(EXECUTE_FILE, AUTO_EXECUTE_CMD) end)
+            SaveExecuteFile()
             if type(queue_on_teleport) == "function" then pcall(function() queue_on_teleport(AUTO_EXECUTE_CMD) end) end
-            
-            LoadBackupFile()
-            
-            task.spawn(function()
-                task.wait(1)
-                if backupData["FarmEvent"] ~= nil and farmEventToggle then farmEventToggle:Set(backupData["FarmEvent"]) end
-                if backupData["FarmLv"] ~= nil and farmLvToggle then farmLvToggle:Set(backupData["FarmLv"]) end
-                if backupData["RevivePlayers"] ~= nil and reviveToggle then reviveToggle:Set(backupData["RevivePlayers"]) end
-                if backupData["AntiPause"] ~= nil and antiPauseToggle then antiPauseToggle:Set(backupData["AntiPause"]) end
-                if backupData["AutoJoin"] ~= nil and autoJoinToggle then autoJoinToggle:Set(backupData["AutoJoin"]) end
-                if backupData["FarmMode"] ~= nil and farmModeDropdown then farmModeDropdown:Set(backupData["FarmMode"]) end
-            end)
-            
-            Notify("✅ Auto Execute + Backup", "Đã bật! Thư mục đã tạo.", 5)
+            Notify("✅ Auto Execute", "Đã bật! Đang tự động lưu...", 5)
         else
             pcall(function() if type(queue_on_teleport) == "function" then queue_on_teleport("") end end)
-            Notify("❌ Auto Execute + Backup", "Đã TẮT.", 3)
+            Notify("❌ Auto Execute", "Đã tắt", 3)
         end
     end,
 })
 
--- ===== AUTO RECONNECT =====
 extraSection:Toggle({
     Title = "Auto Reconnect",
-    Desc = "Tự động vào lại server khi mất kết nối (tự đổi server nếu server cũ đã die)",
-    Value = true, -- Bật sẵn
+    Desc = "Tự động vào lại server khi mất kết nối",
+    Value = true,
+    Flag = "AutoReconnect",
     Callback = function(state)
-        autoReconnectEnabled = state
         if state then
-            local reconnectScript = string.format([[
-                pcall(function()
-                    local TS = game:GetService("TeleportService")
-                    local Players = game:GetService("Players")
-                    local PlaceId = %d
-                    local JobId = "%s"
-                    
-                    local success = pcall(function()
-                        TS:TeleportToPlaceInstance(PlaceId, JobId, Players.LocalPlayer)
-                    end)
-                    
-                    if not success then
-                        pcall(function()
-                            local servers = TS:GetPublicRoomsAsync(PlaceId, 1)
-                            if servers and #servers > 0 then
-                                TS:TeleportToPlaceInstance(PlaceId, servers[1].Id, Players.LocalPlayer)
-                            else
-                                TS:Teleport(PlaceId, Players.LocalPlayer)
-                            end
-                        end)
-                    end
-                end)
-            ]], game.PlaceId, game.JobId)
-            
-            if type(queue_on_teleport) == "function" then
-                pcall(function() queue_on_teleport(reconnectScript) end)
-            end
-            Notify("✅ Auto Reconnect", "Đã BẬT - Tự động vào lại server", 4)
+            Notify("✅ Auto Reconnect", "Đã bật - Sẽ tự động load lại khi bị ngắt", 4)
         else
-            pcall(function() if type(queue_on_teleport) == "function" then queue_on_teleport(AUTO_EXECUTE_CMD) end end)
-            Notify("❌ Auto Reconnect", "Đã TẮT", 3)
+            Notify("❌ Auto Reconnect", "Đã tắt", 3)
         end
     end,
 })
 
 local farmModeDropdown = farmTab:Dropdown({ 
     Title = "Farm Mode (Revive Players)", Desc = "Chọn chế độ cứu", 
-    Values = {"Cứu nhanh", "Chờ cứu"}, Value = backupData["FarmMode"] or "Chờ cứu", 
-    Callback = function(option) 
-        farmMode = option or "Chờ cứu" 
-        if autoExecuteBackupEnabled then backupData["FarmMode"] = farmMode; SaveBackupNow() end
-    end 
+    Values = {"Cứu nhanh", "Chờ cứu"}, Value = "Chờ cứu", 
+    Flag = "FarmMode",
+    Callback = function(option) farmMode = option or "Chờ cứu" end 
 })
 
 farmEventToggle = farmTab:Toggle({ 
     Title = "Farm Event", Desc = "Tự động farm items sự kiện", 
-    Value = backupData["FarmEvent"] or false, 
-    Callback = function(value) 
-        if value then StartFarmEvent() else StopFarmEvent() end 
-        if autoExecuteBackupEnabled then backupData["FarmEvent"] = value; SaveBackupNow() end
-    end 
+    Value = false, 
+    Flag = "FarmEvent",
+    Callback = function(value) if value then StartFarmEvent() else StopFarmEvent() end end 
 })
 
 farmLvToggle = farmTab:Toggle({ 
     Title = "Farm Lv", Desc = "Treo tường farm level", 
-    Value = backupData["FarmLv"] or false, 
-    Callback = function(value) 
-        if value then StartFarmLv() else StopFarmLv() end 
-        if autoExecuteBackupEnabled then backupData["FarmLv"] = value; SaveBackupNow() end
-    end 
+    Value = false, 
+    Flag = "FarmLv",
+    Callback = function(value) if value then StartFarmLv() else StopFarmLv() end end 
 })
 
 reviveToggle = farmTab:Toggle({ 
     Title = "Revive Players (Farm Token)", Desc = "Tự động cứu người chơi", 
-    Value = backupData["RevivePlayers"] or false, 
-    Callback = function(value) 
-        if value then StartRevivePlayers() else StopRevivePlayers() end 
-        if autoExecuteBackupEnabled then backupData["RevivePlayers"] = value; SaveBackupNow() end
-    end 
+    Value = false, 
+    Flag = "RevivePlayers",
+    Callback = function(value) if value then StartRevivePlayers() else StopRevivePlayers() end end 
 })
 
 -- ============================================================
--- ===== REALTIME UPDATE TEXT =================================
+-- ===== REALTIME UPDATE TEXT (CHỈ HIỆN KHI BẬT) ==============
 -- ============================================================
 task.spawn(function()
     local lastTickEvent, lastTickLv, lastTickToken = tick(), tick(), tick()
     local lastScanTime, cachedScanText = 0, ""
-    local wasInLobby = false
     
     while task.wait(0.5) do
         local now = tick()
         if now - lastScanTime >= 2 then lastScanTime = now; cachedScanText = FormatScanEventItemsDisplay() end
         
-        if currentIsInLobby then
-            uiFarmEventText:SetDesc("Status Farm: ❗Lobby detected - Đang ở lobby chờ joined")
-            uiFarmLvText:SetDesc("Status Farm: ❗Lobby detected - Đang ở lobby chờ joined")
-            uiFarmTokenText:SetDesc("Status Farm: ❗Lobby detected - Đang ở lobby chờ joined")
-            wasInLobby = true
-            task.wait(0.1)
-            continue
-        elseif wasInLobby and not currentIsInLobby then
-            wasInLobby = false
-        end
-
-        if isFarming then
-            local delta = now - lastTickEvent; lastTickEvent = now
-            if _G.FarmEventUserActive then farmEventAfkTimer = 0; _G.FarmEventUserActive = false else farmEventAfkTimer = farmEventAfkTimer + delta end
-        else lastTickEvent = now end
-        
-        if isFarmingLv then
-            local delta = now - lastTickLv; lastTickLv = now
-            if _G.FarmLvUserActive then farmLvAfkTimer = 0; _G.FarmLvUserActive = false else farmLvAfkTimer = farmLvAfkTimer + delta end
-        else lastTickLv = now end
-        
-        if isRevivingActive then
-            local delta = now - lastTickToken; lastTickToken = now
-            if _G.FarmTokenUserActive then farmTokenAfkTimer = 0; _G.FarmTokenUserActive = false else farmTokenAfkTimer = farmTokenAfkTimer + delta end
-        else lastTickToken = now end
-        
         local livePos = nil
         local hrp = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if hrp then livePos = hrp.Position end
 
-        if uiFarmEventText then
-            if isFarming then
+        -- FARM EVENT
+        if isFarming and uiFarmEventText then
+            if currentIsInLobby then
+                uiFarmEventText:SetDesc("Status Farm: ❗Lobby detected - Đang ở lobby chờ joined")
+            else
                 local info = "Target items: " .. (farmEventTargetName or "—")
-                if farmEventTargetPos and livePos then info = info .. string.format("\nLocation: (%.1f, %.1f, %.1f) - %.1f studs", farmEventTargetPos.X, farmEventTargetPos.Y, farmEventTargetPos.Z, (livePos - farmEventTargetPos).Magnitude)
-                else info = info .. "\nLocation: " .. locationDots end
+                if farmEventTargetPos and livePos then 
+                    info = info .. string.format("\nLocation: (%.1f, %.1f, %.1f) - %.1f studs", 
+                        farmEventTargetPos.X, farmEventTargetPos.Y, farmEventTargetPos.Z, (livePos - farmEventTargetPos).Magnitude)
+                else 
+                    info = info .. "\nLocation: " .. locationDots 
+                end
                 info = info .. "\nFPS: " .. currentFps .. " | CPU: " .. currentCpu .. " | Ping: " .. currentPing .. " | GPU: " .. currentGpu
                 info = info .. "\nPlayers: " .. playerCountNow
                 info = info .. "\nCounter AFK: " .. FormatTime(farmEventAfkTimer)
                 info = info .. "\nStatus Farm: " .. farmEventStatusText
                 info = info .. "\n\nScan EventItems:\n" .. cachedScanText
                 uiFarmEventText:SetDesc(info)
-            else uiFarmEventText:SetDesc("...") end
+            end
+        elseif not isFarming and uiFarmEventText then
+            uiFarmEventText:SetDesc("...")
         end
-        
-        if uiFarmLvText then
-            if isFarmingLv then
+
+        -- FARM LV
+        if isFarmingLv and uiFarmLvText then
+            if currentIsInLobby then
+                uiFarmLvText:SetDesc("Status Farm: ❗Lobby detected - Đang ở lobby chờ joined")
+            else
                 local info = "FPS: " .. currentFps .. " | CPU: " .. currentCpu .. " | Ping: " .. currentPing .. " | GPU: " .. currentGpu
                 info = info .. "\nPlayers: " .. playerCountNow
                 info = info .. "\nLocation: " .. (livePos and string.format("(%.1f, %.1f, %.1f)", livePos.X, livePos.Y, livePos.Z) or "—")
                 info = info .. "\nStatus Farm: " .. farmLvStatusText
                 info = info .. "\nCounter AFK: " .. FormatTime(farmLvAfkTimer)
                 uiFarmLvText:SetDesc(info)
-            else uiFarmLvText:SetDesc("...") end
+            end
+        elseif not isFarmingLv and uiFarmLvText then
+            uiFarmLvText:SetDesc("...")
         end
-        
-        if uiFarmTokenText then
-            if isRevivingActive then
+
+        -- FARM TOKEN
+        if isRevivingActive and uiFarmTokenText then
+            if currentIsInLobby then
+                uiFarmTokenText:SetDesc("Status Farm: ❗Lobby detected - Đang ở lobby chờ joined")
+            else
                 local info = "Target Players: " .. tokenCurrentTargetName
                 info = info .. "\nFarm Mode: " .. farmMode
                 info = info .. "\nPlayers: " .. playerCountNow
                 info = info .. "\nFPS: " .. currentFps .. " | CPU: " .. currentCpu .. " | Ping: " .. currentPing .. " | GPU: " .. currentGpu
-                if tokenCurrentTargetPos and livePos then info = info .. string.format("\nLocation: (%.1f, %.1f, %.1f) - %.1f studs", tokenCurrentTargetPos.X, tokenCurrentTargetPos.Y, tokenCurrentTargetPos.Z, (livePos - tokenCurrentTargetPos).Magnitude)
-                else info = info .. "\nLocation: " .. locationDots end
+                if tokenCurrentTargetPos and livePos then 
+                    info = info .. string.format("\nLocation: (%.1f, %.1f, %.1f) - %.1f studs", 
+                        tokenCurrentTargetPos.X, tokenCurrentTargetPos.Y, tokenCurrentTargetPos.Z, (livePos - tokenCurrentTargetPos).Magnitude)
+                else 
+                    info = info .. "\nLocation: " .. locationDots 
+                end
                 info = info .. "\nCounter AFK: " .. FormatTime(farmTokenAfkTimer)
                 info = info .. "\nPlayer Success: " .. tokenStatSuccess
                 info = info .. "\nThe user is dead: " .. tokenStatDead
                 info = info .. "\nStatus Farm: " .. farmTokenStatusText
                 uiFarmTokenText:SetDesc(info)
-            else uiFarmTokenText:SetDesc("...") end
+            end
+        elseif not isRevivingActive and uiFarmTokenText then
+            uiFarmTokenText:SetDesc("...")
         end
+    end
+end)
+
+-- ============================================================
+-- ===== WINDUI CONFIG LOAD & SAVE TỰ ĐỘNG ====================
+-- ============================================================
+task.spawn(function()
+    task.wait(2)
+    pcall(function() myConfig:Load() end)
+end)
+
+task.spawn(function()
+    while task.wait(10) do
+        pcall(function() myConfig:Save() end)
     end
 end)
 
@@ -1565,7 +1679,13 @@ MusicTab:Toggle({ Title = "Auto Start/Audio", Desc = "Tự động phát sound t
 
 -- ===== THÔNG BÁO KHI LOAD XONG =====
 WindUI:Notify({
-    Title = "Mẹ mày béo",
-    Content = "Đã thêm các tính năng trong chức năng phụ",
+    Title = "Aur_Meow",
+    Content = "💀",
     Duration = 5,
 })
+
+print("✅ Evade Event Farm v12.2.0 (WindUI) đã load!")
+print("📝 Text: Chỉ hiển thị khi bật Toggle Farm tương ứng")
+print("📍 Set location click: Tự động xoá toạ độ cũ khi ghim mới, GUI không bị mất khi rejoin")
+print("⚙️ WindUI ConfigManager: Tự động lưu/load cài đặt")
+print("🎵 Music Tab: Đầy đủ")
