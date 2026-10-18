@@ -51,6 +51,110 @@ local Window = WindUI:CreateWindow({
     HideSearchBar = true,
 })
 
+
+
+
+
+-- ============================================================
+-- ===== TAB: MAIN/USER (AN TOÀN CHO MOBILE) ==================
+-- ============================================================
+local mainTab = Window:Tab({ Title = "Main/User", Icon = "user" })
+
+local userInfoText = mainTab:Paragraph({
+    Title = "👤 User info",
+    Desc = "Đang tải...",
+    Color = "Blue",
+})
+
+local hardwareText = mainTab:Paragraph({
+    Title = "🖥️ Hardware structure",
+    Desc = "Đang tải...",
+    Color = "Green",
+})
+
+-- Hàm lấy tên Executor an toàn
+local function getExecutorName()
+    local name = "Unknown"
+    if identifyexecutor then
+        local ok, exec = pcall(identifyexecutor)
+        if ok and exec then name = exec end
+    end
+    return name
+end
+
+local executorName = getExecutorName()
+
+-- Hàm lấy loại thiết bị an toàn
+local function getDeviceType()
+    local UIS = game:GetService("UserInputService")
+    if UIS.TouchEnabled and not UIS.KeyboardEnabled then
+        return "Mobile"
+    elseif UIS.KeyboardEnabled and UIS.MouseEnabled then
+        return "PC / Windows"
+    end
+    return "Unknown"
+end
+
+local deviceType = getDeviceType()
+
+-- Chấm nhấp nháy
+local dots = ".."
+task.spawn(function()
+    while task.wait(0.5) do
+        dots = (dots == "..") and "..." or ".."
+    end
+end)
+
+-- Vòng lặp cập nhật (Tự động lấy FPS/Ping sau khi biến được khai báo)
+task.spawn(function()
+    task.wait(3) -- Đợi 3 giây cho toàn bộ script load xong các biến
+    
+    while task.wait(0.5) do
+        local player = game.Players.LocalPlayer
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+        local posStr = "—"
+        if hrp then
+            posStr = string.format("(%.1f, %.1f, %.1f)", hrp.Position.X, hrp.Position.Y, hrp.Position.Z)
+        end
+
+        local hpStr = "—"
+        if hum then
+            hpStr = string.format("%.0f / %.0f", hum.Health, hum.MaxHealth)
+        end
+
+        -- Lấy FPS/Ping từ biến toàn cục của script gốc (nếu có)
+        local fpsVal = _G.currentFps or 60
+        local pingVal = _G.currentPing or "N/A"
+        local gpuVal = _G.currentGpu or "N/A"
+        local cpuVal = _G.currentCpu or "N/A"
+
+        -- User Info
+        local userInfo = string.format(
+            "Username: %s - @%s\nHP: %s\nDevice: %s\nClient: %s\nLocation: %s %s",
+            player.DisplayName, player.Name, hpStr, deviceType, executorName, posStr, dots
+        )
+        pcall(function() userInfoText:SetDesc(userInfo) end)
+
+        -- Hardware (Network)
+        local networkStats = game:GetService("Stats").Network
+        local sendKbps, recvKbps = 0, 0
+        pcall(function()
+            sendKbps = networkStats:FindFirstChild("DataSent") and networkStats.DataSent:GetValue() or 0
+            recvKbps = networkStats:FindFirstChild("DataReceived") and networkStats.DataReceived:GetValue() or 0
+        end)
+
+        local hardwareInfo = string.format(
+            "FPS: %s\nPing: %s\nGPU: %s\nCPU: %s\nNetwork: %.2f KB/s - %.2f KB/s %s",
+            tostring(fpsVal), tostring(pingVal), tostring(gpuVal), tostring(cpuVal), sendKbps, recvKbps, dots
+        )
+        pcall(function() hardwareText:SetDesc(hardwareInfo) end)
+    end
+end)
+
+
 -- ============================================================
 -- ===== WINDUI CONFIG MANAGER ================================
 -- ============================================================
