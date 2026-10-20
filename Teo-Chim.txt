@@ -7,7 +7,7 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 -- ============================================================
 -- ===== CẤU HÌNH =============================================
 -- ============================================================
-local AUTO_EXECUTE_URL = ""
+local AUTO_EXECUTE_URL = "https://raw.githubusercontent.com/PhongScriptDev/Models_Luaw/refs/heads/main/Teo-Chim.txt"
 local AUTO_EXECUTE_CMD = [[loadstring(game:HttpGet("]] .. AUTO_EXECUTE_URL .. [["))()]]
 local FOLDER_NAME = "Mẹ mày béo"
 local EXECUTE_FILE = FOLDER_NAME .. "/Execute.txt"
