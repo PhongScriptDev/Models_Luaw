@@ -3,92 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bagah System | Secure Area</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Bagah Vault | Multi-Layer Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #050505;
+            --bg: #050505;
             --surface: #0f0f13;
-            --primary: #facc15;
-            --danger: #ef4444;
+            --primary: #facc15; /* Vàng */
+            --success: #4ade80; /* Xanh lá */
+            --danger: #ef4444;  /* Đỏ */
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --border: #27272a;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg);
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
             background-image: 
-                linear-gradient(rgba(15, 15, 19, 0.9), rgba(5, 5, 5, 0.9)),
+                linear-gradient(rgba(15, 15, 19, 0.95), rgba(5, 5, 5, 0.95)),
                 linear-gradient(90deg, var(--border) 1px, transparent 1px),
                 linear-gradient(var(--border) 1px, transparent 1px);
-            background-size: 100% 100%, 30px 30px, 30px 30px;
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            overflow: hidden;
         }
+        /* --- HEADER --- */
         header {
             width: 100%; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
             border-bottom: 1px solid var(--border); background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(10px);
+            z-index: 10;
         }
         .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
         .logo-icon { width: 30px; height: 30px; background: var(--primary); color: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Fira Code', monospace; font-size: 18px; }
-        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(250, 204, 21, 0.1); color: var(--primary); border: 1px solid rgba(250, 204, 21, 0.3); font-family: 'Fira Code', monospace; }
-        
-        .center-container { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
-        .center-container.active { display: flex; }
-        
-        .denied-box { background: rgba(20, 0, 0, 0.8); border: 1px solid var(--danger); border-radius: 12px; padding: 30px; max-width: 400px; width: 100%; box-shadow: 0 0 30px rgba(239, 68, 68, 0.2); }
-        .denied-icon { font-size: 50px; margin-bottom: 15px; }
-        .denied-box h1 { color: var(--danger); font-size: 22px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; }
-        .denied-box p { color: var(--text-muted); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
-        .error-code { font-family: 'Fira Code', monospace; font-size: 12px; background: #000; padding: 8px; border-radius: 6px; color: var(--danger); border: 1px dashed var(--danger); }
+        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(250, 204, 21, 0.1); color: var(--primary); border: 1px solid rgba(250, 204, 21, 0.3); font-family: 'Fira Code', monospace; transition: 0.3s;}
 
-        #code-screen { flex: 1; width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; display: none; flex-direction: column; }
-        #code-screen.active { display: flex; }
+        /* --- CONTAINERS --- */
+        .layer-container { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; animation: fadeIn 0.4s ease-out forwards; }
+        .layer-container.active { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* --- LỚP 1 & 2 (CLOUDFLARE STYLE) --- */
+        .security-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 40px 30px; max-width: 400px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        .spinner-box { width: 50px; height: 50px; margin: 0 auto 20px auto; position: relative; }
+        .spinner-ring { width: 100%; height: 100%; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .security-box h2 { font-size: 20px; margin-bottom: 10px; font-weight: 700; }
+        .security-box p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+        
+        /* --- LỚP 3 (PASSWORD VAULT) --- */
+        .vault-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 30px; max-width: 400px; width: 100%; text-align: left; }
+        .vault-box h2 { font-size: 18px; margin-bottom: 5px; color: var(--primary); }
+        .vault-box p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group input {
+            width: 100%; padding: 12px 15px; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text-main); font-size: 16px; font-family: 'Fira Code', monospace;
+            outline: none; transition: 0.2s; letter-spacing: 2px;
+        }
+        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+        .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; }
+        .btn-submit:hover { background: #fff; box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); }
+
+        /* --- MÀN HÌNH LỖI --- */
+        .error-box { background: rgba(20, 0, 0, 0.8); border: 1px solid var(--danger); border-radius: 12px; padding: 30px; max-width: 400px; width: 100%; box-shadow: 0 0 30px rgba(239, 68, 68, 0.2); }
+        .error-box h1 { color: var(--danger); font-size: 22px; margin-bottom: 10px; text-transform: uppercase; }
+        .error-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 15px; }
+        .error-code { font-family: 'Fira Code', monospace; font-size: 12px; background: #000; padding: 8px; border-radius: 6px; color: var(--danger); border: 1px dashed var(--danger); text-align: left; }
+
+        /* --- CODE SCREEN --- */
+        #layer-code { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; display: none; flex-direction: column; flex: 1; }
+        #layer-code.active { display: flex; animation: fadeIn 0.6s ease-out forwards; }
         .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .toolbar h3 { font-size: 14px; color: var(--text-muted); font-weight: 400; }
-        .btn-copy { background: var(--primary); color: #000; border: none; padding: 10px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-        .btn-copy:hover { background: #fff; box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); }
-        .btn-copy:active { transform: scale(0.95); }
+        .btn-copy { background: var(--primary); color: #000; border: none; padding: 10px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.2s;}
+        .btn-copy:hover { background: #fff; }
         .code-wrapper { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; flex: 1; display: flex; }
-        pre { margin: 0; padding: 20px; overflow: auto; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; color: #e2e8f0; width: 100%; height: 60vh; }
-        pre::-webkit-scrollbar { width: 8px; height: 8px; }
-        pre::-webkit-scrollbar-track { background: var(--surface); }
-        pre::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        pre { margin: 0; padding: 20px; overflow: auto; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; color: #e2e8f0; width: 100%; height: 60vh; user-select: text; }
     </style>
 </head>
 <body>
+
     <header>
-        <div class="logo-area"><div class="logo-icon">B</div>Bagah System</div>
-        <div class="status-badge" id="header-status">CHECKING...</div>
+        <div class="logo-area"><div class="logo-icon">B</div>Bagah Vault</div>
+        <div class="status-badge" id="header-status">INITIALIZING...</div>
     </header>
 
-    <div id="denied-screen" class="center-container">
-        <div class="denied-box fade-in">
-            <div class="denied-icon">🛑</div>
-            <h1>Access Denied</h1>
-            <p>Hệ thống không tìm thấy mã truy cập hợp lệ. Vui lòng thêm <b>?key=admin</b> vào cuối đường dẫn URL.</p>
-            <div class="error-code">ERROR: 403_FORBIDDEN<br>MISSING_URL_KEY</div>
+    <!-- LỚP 1: ROBOT DETECTED -->
+    <div id="layer-1" class="layer-container active">
+        <div class="security-box">
+            <div class="spinner-box"><div class="spinner-ring"></div></div>
+            <h2>Robot Detected</h2>
+            <p id="l1-msg">Đang kết nối với máy chủ bảo mật. Vui lòng đợi trong giây lát...</p>
         </div>
     </div>
 
-    <div id="code-screen">
-        <div class="toolbar fade-in">
-            <h3>// Trạng thái: <span style="color: var(--primary);">Đã xác minh (Admin)</span></h3>
+    <!-- LỚP 2: ADMIN IP CHECK -->
+    <div id="layer-2" class="layer-container">
+        <div class="security-box">
+            <div class="spinner-box"><div class="spinner-ring" style="border-top-color: var(--success);"></div></div>
+            <h2>Verifying Identity</h2>
+            <p id="l2-msg">Đang đối chiếu địa chỉ IP thiết bị với cơ sở dữ liệu Admin...</p>
+        </div>
+    </div>
+
+    <!-- LỚP 3: PASSWORD VAULT -->
+    <div id="layer-3" class="layer-container">
+        <div class="vault-box">
+            <h2>Security Key Required</h2>
+            <p>Nhập mật khẩu để giải mã kho lưu trữ.</p>
+            <div class="input-group">
+                <input type="password" id="vault-pass" placeholder="••••••••" autocomplete="off">
+            </div>
+            <button class="btn-submit" onclick="verifyPassword()">Unlock Vault</button>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH LỖI CHUNG -->
+    <div id="layer-error" class="layer-container">
+        <div class="error-box">
+            <h1>Access Denied</h1>
+            <p id="error-msg">Hệ thống đã chặn truy cập của bạn vì lý do bảo mật.</p>
+            <div class="error-code" id="error-code">ERROR: 403_FORBIDDEN</div>
+        </div>
+    </div>
+
+    <!-- MÀN HÌNH CODE -->
+    <div id="layer-code">
+        <div class="toolbar">
+            <h3 style="color: var(--success); font-family: 'Fira Code';">// Access Granted - Welcome Admin</h3>
             <button class="btn-copy" onclick="copyCode()">Copy Raw Code</button>
         </div>
-        <div class="code-wrapper fade-in">
-            <pre id="codeBlock">Đang tải dữ liệu...</pre>
+        <div class="code-wrapper">
+            <pre id="codeBlock">Đang tải...</pre>
         </div>
     </div>
 
     <script>
-        // ĐÂY LÀ NỘI DUNG CODE LUA CỦA BẠN (Dán vào giữa 2 dấu backtick)
+        // ==========================================
+        // CẤU HÌNH BẢO MẬT
+        // ==========================================
+        // Thay thế bằng IP thật của bạn (Lấy ở whatismyip.com)
+        const ALLOWED_IPS = ["14.249.135.65", "127.0.0.1"]; 
+        const VAULT_PASSWORD = "18062012";
+
+        // Code Lua của bạn (Dán vào giữa 2 dấu backtick)
         const SECRET_LUA_CODE = `local SUPPORTED_GAMES = {
     ["Evade"] = {
         full = "https://api.jnkie.com/.../download",
@@ -96,53 +158,156 @@
         placeIds = { 10324346056, 9872472334 }
     }
 }
--- Code Lua của bạn ở đây...`;
+print("Vault Unlocked Successfully!")`;
 
-        // MẬT KHẨU ĐỂ VÀO WEB (Bạn có thể đổi chữ admin thành chữ khác tùy thích)
-        const SECRET_KEY = "18062012"; 
-
-        function checkAccess() {
-            const deniedScreen = document.getElementById('denied-screen');
-            const codeScreen = document.getElementById('code-screen');
-            const headerStatus = document.getElementById('header-status');
-
-            // Lấy phần URL sau dấu ?
-            const urlParams = new URLSearchParams(window.location.search);
-            const key = urlParams.get('key');
-
-            // Nếu key trên URL giống với SECRET_KEY
-            if (key === SECRET_KEY) {
-                document.getElementById('codeBlock').textContent = SECRET_LUA_CODE;
-                codeScreen.classList.add('active');
-                headerStatus.textContent = "SECURE";
-                headerStatus.style.color = "#4ade80";
-                headerStatus.style.borderColor = "rgba(74, 222, 128, 0.3)";
-                headerStatus.style.background = "rgba(74, 222, 128, 0.1)";
+        // ==========================================
+        // CÁC HÀM XỬ LÝ GIAO DIỆN
+        // ==========================================
+        function switchLayer(layerId) {
+            document.querySelectorAll('.layer-container, #layer-code').forEach(el => el.classList.remove('active'));
+            if(layerId === 'code') {
+                document.getElementById('layer-code').classList.add('active');
             } else {
-                // Nếu không có key hoặc key sai -> Chặn
-                deniedScreen.classList.add('active');
-                headerStatus.textContent = "BLOCKED";
-                headerStatus.style.color = "#ef4444";
-                headerStatus.style.borderColor = "rgba(239, 68, 68, 0.3)";
-                headerStatus.style.background = "rgba(239, 68, 68, 0.1)";
+                document.getElementById(layerId).classList.add('active');
             }
         }
 
+        function showError(title, msg, code) {
+            document.getElementById('header-status').textContent = "BLOCKED";
+            document.getElementById('header-status').style.color = "var(--danger)";
+            document.getElementById('error-msg').textContent = msg;
+            document.getElementById('error-code').innerHTML = `ERROR: ${title}<br>${code}`;
+            switchLayer('layer-error');
+        }
+
+        function setStatusColor(color) {
+            const badge = document.getElementById('header-status');
+            badge.style.color = color;
+            badge.style.borderColor = color === "var(--success)" ? "rgba(74, 222, 128, 0.3)" : "rgba(250, 204, 21, 0.3)";
+            badge.style.background = color === "var(--success)" ? "rgba(74, 222, 128, 0.1)" : "rgba(250, 204, 21, 0.1)";
+        }
+
+        // ==========================================
+        // KIỂM TRA CHỐNG BOT (Hàm dùng chung)
+        // ==========================================
+        function isBot() {
+            return navigator.webdriver || /HeadlessChrome|PhantomJS|Python|curl|wget/i.test(navigator.userAgent);
+        }
+
+        // ==========================================
+        // LUỒNG CHẠY CHÍNH (ASYNC/AWAIT)
+        // ==========================================
+        async function initSecurity() {
+            // --- BẮT ĐẦU LỚP 1 ---
+            document.getElementById('header-status').textContent = "LAYER 1";
+            
+            // 1. Kiểm tra Bot
+            if (isBot()) {
+                showError("403_BOT_DETECTED", "Phát hiện truy cập tự động bằng Bot.", "AUTOMATION_DETECTED_AT_LAYER_1");
+                return;
+            }
+            
+            // 2. Lấy IP người dùng
+            let userIP = "Unknown";
+            try {
+                document.getElementById('l1-msg').innerHTML = "Đang lấy địa chỉ IP công khai...";
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                userIP = data.ip;
+                document.getElementById('l1-msg').innerHTML = `IP của bạn: <b style="color:var(--primary);">${userIP}</b><br>Đang chuyển sang lớp xác minh...`;
+            } catch (e) {
+                showError("500_NETWORK_ERR", "Không thể lấy địa chỉ IP. Vui lòng kiểm tra kết nối mạng (hoặc tắt VPN/Adblock).", "IP_FETCH_FAILED");
+                return;
+            }
+
+            // Chờ 1.5s cho ngầu
+            await new Promise(r => setTimeout(r, 1500));
+
+            // --- BẮT ĐẦU LỚP 2 ---
+            document.getElementById('header-status').textContent = "LAYER 2";
+            switchLayer('layer-2');
+            
+            // 1. Kiểm tra Bot lần 2
+            if (isBot()) {
+                showError("403_BOT_DETECTED", "Phát hiện truy cập tự động bằng Bot.", "AUTOMATION_DETECTED_AT_LAYER_2");
+                return;
+            }
+
+            // 2. So khớp IP
+            await new Promise(r => setTimeout(r, 1200)); // Delay fake check
+            if (!ALLOWED_IPS.includes(userIP)) {
+                showError("403_IP_MISMATCH", `Địa chỉ IP (${userIP}) không nằm trong danh sách cho phép của Admin.`, "UNAUTHORIZED_IP_ADDRESS");
+                return;
+            }
+
+            document.getElementById('l2-msg').innerHTML = `<b style="color:var(--success);">Xác minh IP thành công!</b><br>Vui lòng nhập mật khẩu.`;
+            await new Promise(r => setTimeout(r, 1000));
+
+            // --- BẮT ĐẦU LỚP 3 ---
+            document.getElementById('header-status').textContent = "LAYER 3";
+            setStatusColor("var(--primary)");
+            switchLayer('layer-3');
+        }
+
+        // ==========================================
+        // XÁC MINH MẬT KHẨU (LỚP 3)
+        // ==========================================
+        function verifyPassword() {
+            // Kiểm tra Bot lần 3
+            if (isBot()) {
+                showError("403_BOT_DETECTED", "Phát hiện truy cập tự động bằng Bot.", "AUTOMATION_DETECTED_AT_LAYER_3");
+                return;
+            }
+
+            const input = document.getElementById('vault-pass').value;
+            const btn = document.querySelector('.btn-submit');
+
+            if (input === VAULT_PASSWORD) {
+                // Đúng mật khẩu
+                btn.textContent = "Decrypting...";
+                btn.style.background = "var(--success)";
+                
+                setTimeout(() => {
+                    document.getElementById('header-status').textContent = "SECURE";
+                    setStatusColor("var(--success)");
+                    document.getElementById('codeBlock').textContent = SECRET_LUA_CODE;
+                    switchLayer('code');
+                }, 1000);
+            } else {
+                // Sai mật khẩu
+                btn.textContent = "Access Denied";
+                btn.style.background = "var(--danger)";
+                btn.style.color = "#fff";
+                document.getElementById('vault-pass').style.borderColor = "var(--danger)";
+                
+                setTimeout(() => {
+                    btn.textContent = "Unlock Vault";
+                    btn.style.background = "var(--primary)";
+                    btn.style.color = "#000";
+                    document.getElementById('vault-pass').style.borderColor = "var(--border)";
+                    document.getElementById('vault-pass').value = "";
+                }, 1500);
+            }
+        }
+
+        // ==========================================
+        // HÀM COPY CODE
+        // ==========================================
         function copyCode() {
             const codeText = document.getElementById('codeBlock').textContent;
             navigator.clipboard.writeText(codeText).then(() => {
                 const btn = document.querySelector('.btn-copy');
-                const originalHTML = btn.innerHTML;
                 btn.innerHTML = '✅ Đã Copy!';
                 btn.style.background = '#4ade80';
                 setTimeout(() => {
-                    btn.innerHTML = originalHTML;
+                    btn.innerHTML = 'Copy Raw Code';
                     btn.style.background = 'var(--primary)';
                 }, 2000);
             }).catch(err => alert("Lỗi khi copy!"));
         }
 
-        checkAccess();
+        // Kích hoạt khi tải trang
+        document.addEventListener('DOMContentLoaded', initSecurity);
     </script>
 </body>
 </html>
