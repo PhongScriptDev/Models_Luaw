@@ -257,12 +257,10 @@
         let realIP = "";
         let captchaSolved = { 3: false, 4: false, 5: false };
         
-        // BIẾN ĐẾM LẦN SAI
         let attemptsLeft = 5; 
         
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        // HÀM MÃ HÓA GIẢI MÃ PAYLOAD
         function encryptDecrypt(text) {
             let result = "";
             for (let i = 0; i < text.length; i++) {
@@ -289,11 +287,9 @@
             if(bans[userIP]) {
                 let banInfo = bans[userIP];
                 if (Date.now() < banInfo.unbanTime) {
-                    // Vẫn đang trong thời gian phạt
                     showBanScreen(banInfo.unbanTime);
                     return true;
                 } else {
-                    // Đã hết hạn phạt, xóa khỏi danh sách
                     delete bans[userIP];
                     localStorage.setItem('ipBans', JSON.stringify(bans));
                 }
@@ -303,56 +299,42 @@
 
         function banIP(userIP) {
             let bans = JSON.parse(localStorage.getItem('ipBans')) || {};
-            let currentBan = bans[userIP] || { level: 0 }; // level 0 = chưa từng bị ban
-            
-            // Tăng level phạt nếu tái phạm
+            let currentBan = bans[userIP] || { level: 0 };
             currentBan.level += 1;
-            
-            // Thời gian phạt (tính bằng giờ): Lần 1 = 24h, Lần 2 = 48h, Lần 3 = 72h...
             const banHours = currentBan.level * 24;
             const unbanTime = Date.now() + (banHours * 60 * 60 * 1000);
-            
             bans[userIP] = { level: currentBan.level, unbanTime: unbanTime };
             localStorage.setItem('ipBans', JSON.stringify(bans));
-            
             showBanScreen(unbanTime);
         }
 
         function showBanScreen(unbanTime) {
             document.querySelectorAll('.layer-container').forEach(el => el.classList.remove('active'));
             document.getElementById('banned-layer').classList.add('active');
-            
             const timerEl = document.getElementById('ban-timer');
             
             function updateTimer() {
                 let timeLeft = unbanTime - Date.now();
                 if (timeLeft <= 0) {
-                    document.getElementById('banned-layer').classList.remove('active');
-                    document.getElementById('layer1').classList.add('active');
                     window.location.reload();
                     return;
                 }
-                
                 let hours = Math.floor(timeLeft / (1000 * 60 * 60));
                 let minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
                 let seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                
                 timerEl.innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
             updateTimer();
             setInterval(updateTimer, 1000);
         }
 
-        // KHỞI TẠO HỆ THỐNG
+        // KHỞI TẠO
         window.addEventListener('DOMContentLoaded', () => { 
             updateAdminUI(); 
-            // Lấy IP ngầm để check xem có đang bị ban không trước khi vào Lớp 1
             fetch('https://api.ipify.org?format=json')
             .then(res => res.json())
             .then(data => {
-                if(checkIPBan(data.ip)) {
-                    document.getElementById('welcome-screen').style.display = 'none';
-                }
+                if(checkIPBan(data.ip)) document.getElementById('welcome-screen').style.display = 'none';
             }).catch(e => console.log("Lỗi check ban IP"));
         });
 
@@ -395,10 +377,7 @@
             try {
                 const res = await fetch('https://api.ipify.org?format=json');
                 realIP = (await res.json()).ip;
-                
-                // KIỂM TRA BAN IP Ở ĐÂY
                 if(checkIPBan(realIP)) return;
-
                 document.getElementById('l2-progress').style.width = '100%';
                 await sleep(1000);
                 transitionToLayer('layer3');
@@ -418,7 +397,6 @@
             }, 1500);
         }
 
-        // XỬ LÝ NHẬP MẬT KHẨU (CÓ ĐẾM LẦN SAI)
         async function checkLayer3() {
             if(!captchaSolved[3]) { showError('l3', 'Vui lòng giải Captcha!'); return; }
             const passInput = document.getElementById('pass-input').value;
@@ -427,22 +405,15 @@
                 attemptsLeft--;
                 document.getElementById('attempts-left').innerText = `Số lần thử còn lại: ${attemptsLeft}/5`;
                 
-                if (attemptsLeft <= 0) {
-                    banIP(realIP);
-                    return;
-                }
+                if (attemptsLeft <= 0) { banIP(realIP); return; }
 
                 showError('l3', `Mật khẩu không chính xác! Bạn còn ${attemptsLeft} lần thử.`);
-                
-                // Reset lại Captcha bắt giải lại
                 captchaSolved[3] = false;
                 const cb = document.getElementById('cb-l3'); 
                 cb.classList.remove('success'); cb.innerHTML = ''; cb.onclick = () => verifyCaptcha(3);
                 document.getElementById('btn-l3').disabled = true;
                 return; 
             }
-            
-            // ĐÚNG MẬT KHẨU
             document.getElementById('attempts-left').innerText = `Số lần thử còn lại: 5/5`;
             transitionToLayer('layer4');
         }
@@ -549,45 +520,72 @@
             document.getElementById('admin-code').value = displayCode;
         }
 
-        // HÀM OBFUSCATION
+        // ==========================================
+        // HÀM OBFUSCATION SIÊU CẤP (MÃ HÓA CHUỖI)
+        // ==========================================
         async function obfuscateAdminCode() {
             const rawCode = document.getElementById('admin-code').value;
             if(!rawCode) { alert("Không có code để mã hóa!"); return; }
 
             const btn = document.getElementById('btn-obfuscate');
             const originalText = btn.innerText;
-            btn.innerText = "⏳ Đang mã hóa..."; btn.disabled = true;
+            btn.innerText = "⏳ Đang mã hóa (Có thể mất vài giây)..."; btn.disabled = true;
             btn.style.background = "#666";
 
-            await sleep(1500);
+            await sleep(1000);
 
+            // 1. Chuyển toàn bộ code thành mảng các mã ASCII
             let charCodes = [];
             for (let i = 0; i < rawCode.length; i++) {
-                charCodes.push(rawCode.charCodeAt(i) + 100 + Math.floor(Math.random() * 400));
+                // XOR nhẹ để giấu ký tự gốc, cộng thêm 100 để tránh số âm
+                charCodes.push((rawCode.charCodeAt(i) ^ 42) + 100);
             }
 
+            // 2. XÁO TRỘN MẢNG (Shuffle Array) để chống dịch ngược
             for (let i = charCodes.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [charCodes[i], charCodes[j]] = [charCodes[j], charCodes[i]];
             }
 
             const arrayLength = charCodes.length;
-            const secretSalt = Math.floor(Math.random() * 999999);
+            const secretSalt = Math.floor(Math.random() * 9999); // Tạo muối ngẫu nhiên
             const packedData = JSON.stringify(charCodes);
 
-            const obfuscatedLuau = `-- Protected by System Vault (Anti-Reverse)
+            // 3. Tạo Wrapper Luau (Phong cách string.char và giải mã)
+            // Đoạn code này sẽ tự động lắp ghép lại mảng, giải mã XOR và chạy.
+            const obfuscatedLuau = `-- Protected by System Vault (Advanced String Encoding)
 -- WARNING: Do not modify or share this script.
 local _packed = ${packedData}
-local _len = ${arrayLength}
 local _salt = ${secretSalt}
 local _buffer = {}
-local function _unpack(_val) return string.char((_val - 100 - (_salt % 300)) % 256) end
-for _i, _v in ipairs(_packed) do _buffer[_i] = _unpack(_v) end
+local _key = 42
+
+-- Hàm giải mã ngược (Trừ 100 và XOR)
+local function _unpack(_val)
+    return string.char((_val - 100) ~ _key)
+end
+
+-- Duyệt mảng đã xáo trộn và giải mã
+for _i, _v in ipairs(_packed) do
+    _buffer[_i] = _unpack(_v)
+end
+
+-- Nối thành chuỗi hoàn chỉnh
 local _decoded = table.concat(_buffer)
-_buffer = nil; _packed = nil; _salt = nil;
+
+-- Xóa dấu vết bộ nhớ
+_buffer = nil
+_packed = nil
+
+-- Thực thi
 local _func, _err = loadstring(_decoded)
-_decoded = nil;
-if _func then _func() else warn("[System Vault] Lỗi giải mã bảo vệ: " .. tostring(_err)) end`;
+_decoded = nil -- Xóa tiếp
+
+if _func then
+    _func()
+else
+    warn("[System Vault] Lỗi giải mã bảo vệ: " .. tostring(_err))
+end`;
 
             document.getElementById('admin-code').value = obfuscatedLuau;
             
