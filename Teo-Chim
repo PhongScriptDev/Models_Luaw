@@ -1,0 +1,1905 @@
+-- ===== SCRIPT FARM EVADE - WINDUI EDITION =====
+-- Version: 13.1.1 - Fix Lobby Notify Reset
+-- Copy toàn bộ vào executor
+
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- ============================================================
+-- ===== CẤU HÌNH =============================================
+-- ============================================================
+local AUTO_EXECUTE_URL = "https://raw.githubusercontent.com/PhongScriptDev/Models_Luaw/refs/heads/main/Aur_Edit.txt"
+local AUTO_EXECUTE_CMD = [[loadstring(game:HttpGet("]] .. AUTO_EXECUTE_URL .. [["))()]]
+local FOLDER_NAME = "Mẹ mày béo"
+local EXECUTE_FILE = FOLDER_NAME .. "/Execute.txt"
+local LOCATION_FILE = FOLDER_NAME .. "/ClickLocation.txt"
+
+pcall(function()
+    game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(false)
+end)
+
+local ForceResetMovement = function()
+    pcall(function()
+        local player = game.Players.LocalPlayer
+        if not player or not player.Character then return end
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hum then
+            hum.PlatformStand = false
+            hum.Sit = false
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+        if hrp then hrp.Anchored = false end
+        for _, v in ipairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then v.Anchored = false end
+        end
+    end)
+end
+
+local CreateWall, CreateWallLv
+local TeleportToWall, TeleportToWallLv, TeleportToWallSafe
+local TeleportWithEmote, IsOnWall
+local FormatTime
+
+local Window = WindUI:CreateWindow({
+    Title = "Aur_Meow",
+    Author = "Created by: Aur_Zini",
+    Folder = "EvadeFarm",
+    Size = UDim2.fromOffset(580, 460),
+    Transparent = true,
+    Theme = "Dark",
+    SideBarWidth = 200,
+    HideSearchBar = true,
+})
+
+local ConfigManager = Window.ConfigManager
+local myConfig = ConfigManager:CreateConfig("EvadeFarmConfig")
+
+pcall(function()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://9120263686"
+    s.Volume = 0.5
+    s.Parent = workspace
+    s:Play()
+    s.Ended:Connect(function() s:Destroy() end)
+end)
+
+local farmTab = Window:Tab({ Title = "Event Farm", Icon = "gamepad-2" })
+
+-- ============================================================
+-- ===== CÁC HÀM XỬ LÝ FILE ===================================
+-- ============================================================
+local function EnsureFolder()
+    if type(makefolder) == "function" and type(isfolder) == "function" then
+        if not isfolder(FOLDER_NAME) then pcall(function() makefolder(FOLDER_NAME) end) end
+    end
+end
+
+local function SaveClickLocation(x, y)
+    EnsureFolder()
+    pcall(function() writefile(LOCATION_FILE, tostring(x) .. "," .. tostring(y)) end)
+end
+
+local function LoadClickLocation()
+    if type(isfile) == "function" and isfile(LOCATION_FILE) then
+        local success, content = pcall(readfile, LOCATION_FILE)
+        if success and content then
+            local x, y = string.match(content, "([^,]+),([^,]+)")
+            if x and y then return tonumber(x), tonumber(y) end
+        end
+    end
+    return nil, nil
+end
+
+local function DeleteClickLocation()
+    if type(delfile) == "function" and type(isfile) == "function" and isfile(LOCATION_FILE) then
+        pcall(function() delfile(LOCATION_FILE) end)
+        return true
+    end
+    return false
+end
+
+local function SaveExecuteFile()
+    EnsureFolder()
+    pcall(function() writefile(EXECUTE_FILE, AUTO_EXECUTE_CMD) end)
+end
+
+-- ============================================================
+-- ===== LOGIC CHECK LOBBY ====================================
+-- ============================================================
+local TARGET_XYZ = Vector3.new(122.50, 36.99, -170.65)
+local LOBBY_DISTANCE = 300
+local currentIsInLobby = false
+
+local function UpdateLobbyStatus()
+    local player = game.Players.LocalPlayer
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if not hrp or not hum or hum.Health <= 0 then 
+        currentIsInLobby = true 
+        return 
+    end
+    
+    local dist = (hrp.Position - TARGET_XYZ).Magnitude
+    currentIsInLobby = (dist <= LOBBY_DISTANCE)
+end
+
+task.spawn(function() while task.wait(0.2) do UpdateLobbyStatus() end end)
+
+-- ============================================================
+-- ===== ANTI-AFK SYSTEM ======================================
+-- ============================================================
+local antiAfkEnabled = false
+local lastUserActionTime = tick()
+local antiAfkDelayThreshold = 30
+local antiAfkLoopRunning = false
+local isSimulatingInput = false
+
+local function GetActualAfkTime() return tick() - lastUserActionTime end
+
+local function SimulateKeyPress(keyCode)
+    pcall(function()
+        isSimulatingInput = true
+        local VIM = game:GetService("VirtualInputManager")
+        VIM:SendKeyEvent(true, keyCode, false, game)
+        task.wait(0.1)
+        VIM:SendKeyEvent(false, keyCode, false, game)
+        task.wait(0.2)
+        isSimulatingInput = false
+    end)
+end
+
+local function DoAntiAfkAction()
+    local action = math.random(1, 3)
+    if action == 1 then
+        SimulateKeyPress(Enum.KeyCode.Tab); task.wait(0.5); SimulateKeyPress(Enum.KeyCode.Tab)
+    elseif action == 2 then
+        SimulateKeyPress(Enum.KeyCode.W); task.wait(0.2)
+    elseif action == 3 then
+        SimulateKeyPress(math.random(1, 2) == 1 and Enum.KeyCode.C or Enum.KeyCode.F)
+    end
+end
+
+local function StartAntiAfkLoop()
+    if antiAfkLoopRunning or not antiAfkEnabled then return end
+    antiAfkLoopRunning = true
+    WindUI:Notify({ Title = "📊 Anti AFK", Content = "✔️ Đã kích hoạt", Duration = 5 })
+    task.spawn(function()
+        while antiAfkEnabled and GetActualAfkTime() >= antiAfkDelayThreshold do
+            task.wait(math.random(1, 10))
+            if not antiAfkEnabled or GetActualAfkTime() < antiAfkDelayThreshold then break end
+            DoAntiAfkAction()
+        end
+        antiAfkLoopRunning = false
+    end)
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if antiAfkEnabled and GetActualAfkTime() >= antiAfkDelayThreshold and not antiAfkLoopRunning then StartAntiAfkLoop() end
+    end
+end)
+
+-- ============================================================
+-- ===== ĐẾM FPS / CPU / PING / GPU ===========================
+-- ============================================================
+local currentFps, currentCpu, currentPing, currentGpu = 60, "N/A", "N/A", "N/A"
+
+task.spawn(function()
+    local frameCount, lastTime = 0, tick()
+    game:GetService("RunService").Heartbeat:Connect(function()
+        frameCount = frameCount + 1
+        local now = tick()
+        if now - lastTime >= 1 then
+            currentFps = math.floor(frameCount / (now - lastTime) + 0.5)
+            frameCount, lastTime = 0, now
+            currentCpu = math.clamp(math.floor((1 - (currentFps / 60)) * 100), 0, 100) .. "%"
+            currentGpu = math.clamp(math.floor((1 - (currentFps / 60)) * 80), 0, 100) .. "%"
+        end
+    end)
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local ping = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+            currentPing = math.floor(ping) .. "ms"
+        end)
+    end
+end)
+
+-- ============================================================
+-- ===== BIẾN TRẠNG THÁI ======================================
+-- ============================================================
+local farmEventStatusText = "⏳ Đang khởi động"
+local farmLvStatusText = "⏳ Đang khởi động"
+local farmTokenStatusText = "⏳ Đang khởi động"
+
+local farmEventTargetName = "—"
+local farmEventTargetPos, farmEventTargetDist = nil, 0
+local farmEventAfkTimer, farmLvAfkTimer, farmTokenAfkTimer = 0, 0, 0
+local tokenStatSuccess, tokenStatFail, tokenStatDead = 0, 0, 0
+local tokenCurrentTargetName, tokenCurrentTargetPos, tokenCurrentTargetDist = "—", nil, 0
+
+local locationDots = "."
+task.spawn(function()
+    while task.wait(0.5) do
+        if locationDots == "." then locationDots = ".."
+        elseif locationDots == ".." then locationDots = "..."
+        else locationDots = "." end
+    end
+end)
+
+-- ============================================================
+-- ===== BIẾN CHÍNH ===========================================
+-- ============================================================
+local isFarming, isFarmingLv, isRevivingActive = false, false, false
+local isFarmBlocked, conflictNotified, isCharacterDead = false, false, false
+
+local savedPosEvent, savedPosEventSet = nil, false
+local savedPosLv, savedPosLvSet = nil, false
+local savedPosToken, savedPosTokenSet = nil, false
+
+local wallModel, wallModelLv = nil, nil
+local isTeleporting, isTeleportingLv, isCollecting = false, false, false
+local isTeleportingToSafe = false
+local farmEventToggle, farmLvToggle, reviveToggle = nil, nil, nil
+
+local reviveLoopRunning, isOnWallAndWaiting = false, false
+local reviveTarget, reviveSuccessCount = nil, 0
+
+local farmMode = "Chờ cứu"
+local spamEActive, spamEConn = false, nil
+
+local playerCountNow = #game.Players:GetPlayers()
+local userDiedConn, userDeadFallbackConn = nil, nil
+local userDeadWasAlive = true
+local userDeadCooldown, USER_DEAD_COOLDOWN = 0, 1.5
+
+local targetWatchedUserId, targetWatchThread = nil, nil
+
+local targetEspGui, targetEspConn, targetEspHighlight = nil, nil, nil
+local targetEspLabel, targetEspMode, targetEspPlayer = nil, "idle", nil
+
+local eventItemEspGui, eventItemEspConn, eventItemEspHighlight = nil, nil, nil
+local eventItemEspLabel, eventItemEspTarget = nil, nil
+
+local TELEPORT_TO_WALL_DELAY, WALL_POSITION, WALL_Y_THRESHOLD, POSITION_TOLERANCE = 0.1, Vector3.new(500, 500, 500), 500, 5
+
+-- ===== EVENT ITEMS =====
+local EventItems = {
+    "Souls", "Wisp", "Spellbook", "none",
+    "none", "none", "none", "none", "none", "none", "none",
+    "none", "none", "none", "none", "none", "none", "none", "none", "none", "none"
+}
+
+-- ===== SPECIAL EVENT =====
+local SpecialEvent = {
+    "Glorp", "none", "none", "none", "none"
+}
+
+local uiFarmEventText, uiFarmLvText, uiFarmTokenText
+local itemCollectedCounts = {}
+
+local function Notify(title, content, duration)
+    pcall(function() WindUI:Notify({ Title = title, Content = content, Duration = duration or 3 }) end)
+end
+
+FormatTime = function(seconds)
+    return string.format("%02d:%02d:%02d", math.floor(seconds / 3600), math.floor((seconds % 3600) / 60), math.floor(seconds % 60))
+end
+
+local function SetFarmEventStatus(text) farmEventStatusText = text end
+local function SetFarmLvStatus(text) farmLvStatusText = text end
+local function SetFarmTokenStatus(text) farmTokenStatusText = text end
+
+-- ============================================================
+-- ===== HÀM XỬ LÝ ITEM =======================================
+-- ============================================================
+local function GetValidItemNames(list)
+    local names = {}
+    for _, name in ipairs(list) do
+        if type(name) == "string" and name ~= "" and name ~= "none" and name ~= "nil" then table.insert(names, name) end
+    end
+    return names
+end
+
+local function GetValidEventItemNames() return GetValidItemNames(EventItems) end
+local function GetValidSpecialItemNames() return GetValidItemNames(SpecialEvent) end
+
+local function HasAnyValidEventItem() return #GetValidEventItemNames() > 0 end
+local function HasAnyValidSpecialItem() return #GetValidSpecialItemNames() > 0 end
+
+local function FormatTargetItemsDisplay()
+    local evtNames = GetValidEventItemNames()
+    local spcNames = GetValidSpecialItemNames()
+    local allNames = {}
+    for _, v in ipairs(evtNames) do table.insert(allNames, v) end
+    for _, v in ipairs(spcNames) do table.insert(allNames, v) end
+    if #allNames == 0 then return "—" end
+    return table.concat(allNames, ", ")
+end
+
+local function InitItemCollectedCounts()
+    itemCollectedCounts = {}
+    for _, name in ipairs(EventItems) do
+        if type(name) == "string" and name ~= "" and name ~= "none" and name ~= "nil" then 
+            itemCollectedCounts[name] = 0 
+        end
+    end
+    for _, name in ipairs(SpecialEvent) do
+        if type(name) == "string" and name ~= "" and name ~= "none" and name ~= "nil" then 
+            itemCollectedCounts[name] = 0 
+        end
+    end
+end
+InitItemCollectedCounts()
+
+local function IncrementItemCount(itemName)
+    if itemCollectedCounts[itemName] then itemCollectedCounts[itemName] = itemCollectedCounts[itemName] + 1 end
+end
+
+local function FormatScanEventItemsDisplay()
+    local lines, lineNum = {}, 1
+    for _, name in ipairs(EventItems) do
+        if type(name) == "string" and name ~= "" and name ~= "none" and name ~= "nil" then
+            table.insert(lines, string.format("%d. %s | EventItems [%s]", lineNum, name, string.format("%02d", itemCollectedCounts[name] or 0)))
+            lineNum = lineNum + 1
+        end
+    end
+    for _, name in ipairs(SpecialEvent) do
+        if type(name) == "string" and name ~= "" and name ~= "none" and name ~= "nil" then
+            table.insert(lines, string.format("%d. %s | SpecialEvent [%s]", lineNum, name, string.format("%02d", itemCollectedCounts[name] or 0)))
+            lineNum = lineNum + 1
+        end
+    end
+    return #lines == 0 and "❌ Không có item nào" or table.concat(lines, "\n")
+end
+
+local function getAllItems()
+    local items, player = {}, game.Players.LocalPlayer
+    if not player then return items end
+    local pc = player.Character
+    local evtNames, spcNames = GetValidEventItemNames(), GetValidSpecialItemNames()
+    if #evtNames == 0 and #spcNames == 0 then return items end
+    
+    local desc = workspace:GetDescendants()
+    for i = 1, #desc do
+        local v = desc[i]
+        if (v:IsA("BasePart") or v:IsA("Model")) and not (pc and v:IsDescendantOf(pc)) then
+            local name = string.lower(v.Name)
+            local matchedName, isSpecial = nil, false
+            
+            for _, itemName in ipairs(evtNames) do
+                if string.find(name, string.lower(itemName)) then matchedName = itemName; isSpecial = false; break end
+            end
+            if not matchedName then
+                for _, itemName in ipairs(spcNames) do
+                    if string.find(name, string.lower(itemName)) then matchedName = itemName; isSpecial = true; break end
+                end
+            end
+            
+            if matchedName then
+                local part = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
+                if part and part.Parent then 
+                    table.insert(items, { Object = part, Name = matchedName, RawName = v.Name, Position = part.Position, IsSpecial = isSpecial }) 
+                end
+            end
+        end
+    end
+    return items
+end
+
+-- ============================================================
+-- ===== ESP (TOKEN & EVENT ITEM) =============================
+-- ============================================================
+local function ClearTargetESP()
+    if targetEspConn then pcall(function() targetEspConn:Disconnect() end) targetEspConn = nil end
+    if targetEspHighlight then pcall(function() targetEspHighlight:Destroy() end) targetEspHighlight = nil end
+    if targetEspGui then pcall(function() targetEspGui:Destroy() end) targetEspGui = nil end
+    targetEspLabel, targetEspPlayer, targetEspMode = nil, nil, "idle"
+end
+
+local function CreateTargetESP(targetPlayer)
+    ClearTargetESP()
+    if not targetPlayer or not targetPlayer.Character then return end
+    local targetChar = targetPlayer.Character
+    local head = targetChar:FindFirstChild("Head") or targetChar:FindFirstChild("HumanoidRootPart")
+    if not head then return end
+    targetEspPlayer, targetEspMode = targetPlayer, "blink"
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "EvadeHubESP_Token"
+    highlight.FillColor, highlight.OutlineColor = Color3.fromRGB(0, 0, 0), Color3.fromRGB(255, 0, 0)
+    highlight.FillTransparency, highlight.OutlineTransparency = 0.6, 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee, highlight.Parent = targetChar, workspace
+    targetEspHighlight = highlight
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "EvadeHubName"
+    billboard.Size, billboard.StudsOffset = UDim2.new(0, 200, 0, 40), Vector3.new(0, 3.5, 0)
+    billboard.AlwaysOnTop, billboard.LightInfluence, billboard.MaxDistance = true, 0, 1000
+    billboard.Adornee, billboard.Parent = head, head
+    targetEspGui = billboard
+
+    local label = Instance.new("TextLabel")
+    label.Size, label.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
+    label.Text, label.TextColor3 = targetPlayer.Name, Color3.fromRGB(255, 0, 0)
+    label.TextStrokeTransparency, label.TextStrokeColor3 = 0, Color3.fromRGB(0, 0, 0)
+    label.TextScaled, label.Font = true, Enum.Font.GothamBold
+    label.Parent = billboard
+    targetEspLabel = label
+
+    targetEspConn = game:GetService("RunService").Heartbeat:Connect(function()
+        if not targetEspHighlight or not targetEspHighlight.Parent then return end
+        if targetEspMode == "success" then
+            targetEspHighlight.FillColor, targetEspHighlight.OutlineColor = Color3.fromRGB(0, 200, 0), Color3.fromRGB(0, 255, 0)
+            targetEspHighlight.FillTransparency = 0.4
+            if targetEspLabel and targetEspLabel.Parent then
+                targetEspLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                targetEspLabel.Text = "✅ ĐÃ CỨU - " .. (targetEspPlayer and targetEspPlayer.Name or "")
+            end
+            return
+        end
+        local t = (math.sin(tick() * 8) + 1) / 2
+        targetEspHighlight.FillColor = Color3.fromRGB(0, 0, 0):Lerp(Color3.fromRGB(255, 0, 0), t)
+        targetEspHighlight.OutlineColor = Color3.fromRGB(255, 0, 0):Lerp(Color3.fromRGB(0, 0, 0), t)
+        if targetEspLabel and targetEspLabel.Parent then targetEspLabel.TextColor3 = Color3.fromRGB(255, 0, 0):Lerp(Color3.fromRGB(255, 255, 255), t) end
+        if targetEspPlayer and targetEspPlayer.Character then
+            local newChar = targetEspPlayer.Character
+            if targetEspHighlight and targetEspHighlight.Adornee ~= newChar then targetEspHighlight.Adornee = newChar end
+            local newHead = newChar:FindFirstChild("Head") or newChar:FindFirstChild("HumanoidRootPart")
+            if newHead and targetEspGui and targetEspGui.Parent ~= newHead then targetEspGui.Adornee, targetEspGui.Parent = newHead, newHead end
+        end
+    end)
+end
+
+local function MarkTargetESPSuccess()
+    if targetEspMode ~= "blink" then return end
+    targetEspMode = "success"
+    task.spawn(function() task.wait(1.2); ClearTargetESP() end)
+end
+
+local function ClearEventItemESP()
+    if eventItemEspConn then pcall(function() eventItemEspConn:Disconnect() end) eventItemEspConn = nil end
+    if eventItemEspHighlight then pcall(function() eventItemEspHighlight:Destroy() end) eventItemEspHighlight = nil end
+    if eventItemEspGui then pcall(function() eventItemEspGui:Destroy() end) eventItemEspGui = nil end
+    eventItemEspLabel, eventItemEspTarget = nil, nil
+end
+
+local function CreateEventItemESP(itemPart, itemName)
+    ClearEventItemESP()
+    if not itemPart or not itemPart.Parent then return end
+    eventItemEspTarget = itemPart
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "EvadeHubESP_EventItem"
+    highlight.FillColor, highlight.OutlineColor = Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 0, 255)
+    highlight.FillTransparency, highlight.OutlineTransparency = 0.5, 0
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee, highlight.Parent = itemPart, workspace
+    eventItemEspHighlight = highlight
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "EvadeHubItemName"
+    billboard.Size, billboard.StudsOffset = UDim2.new(0, 200, 0, 40), Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop, billboard.LightInfluence, billboard.MaxDistance = true, 0, 1000
+    billboard.Adornee, billboard.Parent = itemPart, itemPart
+    eventItemEspGui = billboard
+
+    local label = Instance.new("TextLabel")
+    label.Size, label.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
+    label.Text, label.TextColor3 = itemName, Color3.fromRGB(255, 255, 255)
+    label.TextStrokeTransparency, label.TextStrokeColor3 = 0, Color3.fromRGB(0, 0, 0)
+    label.TextScaled, label.Font = true, Enum.Font.GothamBold
+    label.Parent = billboard
+    eventItemEspLabel = label
+
+    local hue = 0
+    eventItemEspConn = game:GetService("RunService").Heartbeat:Connect(function(dt)
+        hue = (hue + dt * 0.5) % 1
+        local c1, c2 = Color3.fromHSV(hue, 1, 1), Color3.fromHSV((hue + 0.5) % 1, 1, 1)
+        if eventItemEspHighlight and eventItemEspHighlight.Parent then eventItemEspHighlight.FillColor, eventItemEspHighlight.OutlineColor = c1, c2 end
+        if eventItemEspLabel and eventItemEspLabel.Parent then eventItemEspLabel.TextColor3 = c1 end
+        if eventItemEspTarget and eventItemEspTarget.Parent and eventItemEspHighlight.Adornee ~= eventItemEspTarget then eventItemEspHighlight.Adornee = eventItemEspTarget end
+    end)
+end
+
+-- ============================================================
+-- ===== SAVED POSITION & XUNG ĐỘT ============================
+-- ============================================================
+local function SaveCurrentPosition(mode)
+    local player = game.Players.LocalPlayer
+    if not player or not player.Character then return end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if mode == "event" and not savedPosEventSet then savedPosEvent, savedPosEventSet = hrp.Position, true
+    elseif mode == "lv" and not savedPosLvSet then savedPosLv, savedPosLvSet = hrp.Position, true
+    elseif mode == "token" and not savedPosTokenSet then savedPosToken, savedPosTokenSet = hrp.Position, true end
+end
+
+local function TeleportToSavedPosition(mode)
+    local savedPos = (mode == "event" and savedPosEvent) or (mode == "lv" and savedPosLv) or (mode == "token" and savedPosToken)
+    if not savedPos then return end
+    local player = game.Players.LocalPlayer
+    if player and player.Character then
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = CFrame.new(savedPos) end
+    end
+end
+
+local function IsAtSavedPosition(mode)
+    local savedPos = (mode == "event" and savedPosEvent) or (mode == "lv" and savedPosLv) or (mode == "token" and savedPosToken)
+    if not savedPos then return true end
+    local player = game.Players.LocalPlayer
+    if not player or not player.Character then return false end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    return (hrp.Position - savedPos).Magnitude <= POSITION_TOLERANCE
+end
+
+local function ClearSavedPosition(mode)
+    if mode == "event" then savedPosEvent, savedPosEventSet = nil, false
+    elseif mode == "lv" then savedPosLv, savedPosLvSet = nil, false
+    elseif mode == "token" then savedPosToken, savedPosTokenSet = nil, false end
+end
+
+local function CountActiveFarms() return (isFarming and 1 or 0) + (isFarmingLv and 1 or 0) + (isRevivingActive and 1 or 0) end
+local function UpdateFarmConflict()
+    if CountActiveFarms() >= 2 then
+        isFarmBlocked = true
+        if not conflictNotified then conflictNotified = true; Notify("❗ Xung đột hệ thống", "⚠️ Xin vui lòng, loại bỏ 1 toggle farm", 5) end
+    else
+        if not isCharacterDead then isFarmBlocked = false end
+        conflictNotified = false
+    end
+end
+local function IsModeBlocked() return isFarmBlocked or isCharacterDead end
+
+-- ============================================================
+-- ===== CHARACTER DEAD HANDLER ===============================
+-- ============================================================
+local function GetActiveMode()
+    if isFarming then return "event" elseif isFarmingLv then return "lv" elseif isRevivingActive then return "token" else return nil end
+end
+
+local function OnCharacterDeadOrDowned()
+    if isCharacterDead then return end
+    isCharacterDead, isFarmBlocked = true, true
+    if isFarming then SetFarmEventStatus("🕑 Character Dead/Downed") end
+    if isFarmingLv then SetFarmLvStatus("🕑 Character Dead/Downed") end
+    if isRevivingActive then SetFarmTokenStatus("🕑 Character Dead/Downed") end
+
+    local mode = GetActiveMode()
+    task.spawn(function()
+        while isCharacterDead do
+            local player = game.Players.LocalPlayer
+            if player and player.Character then
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    isCharacterDead, isFarmBlocked = false, false
+                    task.wait(1.5)
+                    if isFarming then
+                        if not wallModel or not wallModel.Parent then SetFarmEventStatus("🔨 Đang tạo wall_safe"); if CreateWall then CreateWall() end; task.wait(2) end
+                        SetFarmEventStatus("❗ Teleporting - Wall_Safe"); if TeleportToWall then TeleportToWall() end
+                    end
+                    if isFarmingLv then
+                        if not wallModelLv or not wallModelLv.Parent then SetFarmLvStatus("🔨 Đang tạo wall_safe"); if CreateWallLv then CreateWallLv() end; task.wait(2) end
+                        SetFarmLvStatus("❗ Teleporting - Wall_Safe"); if TeleportToWallLv then TeleportToWallLv() end
+                    end
+                    if isRevivingActive then
+                        if not wallModel or not wallModel.Parent then SetFarmTokenStatus("🔨 Đang tạo wall_safe"); if CreateWall then CreateWall() end; task.wait(2) end
+                        SetFarmTokenStatus("❗ Teleporting - Wall_Safe"); if TeleportToWall then TeleportToWall() end
+                    end
+                    break
+                else
+                    if mode and not IsAtSavedPosition(mode) then TeleportToSavedPosition(mode) end
+                    task.wait(0.15)
+                end
+            else task.wait(0.2) end
+        end
+    end)
+end
+
+task.spawn(function()
+    local wasDead = false
+    while task.wait(0.3) do
+        local player = game.Players.LocalPlayer
+        if not player or not player.Character then
+            if not wasDead then wasDead = true; OnCharacterDeadOrDowned() end
+        else
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                local isDead = hum.Health <= 0
+                if isDead and not wasDead then wasDead = true; OnCharacterDeadOrDowned()
+                elseif not isDead and wasDead then wasDead = false; isCharacterDead = false end
+            end
+        end
+    end
+end)
+
+task.spawn(function() while task.wait(0.1) do playerCountNow = #game.Players:GetPlayers() end end)
+
+-- ============================================================
+-- ===== USER INPUT & SPAM E ==================================
+-- ============================================================
+_G.FarmLvUserActive, _G.FarmTokenUserActive, _G.FarmEventUserActive = false, false, false
+local function MarkUserActive()
+    if isSimulatingInput then return end
+    _G.FarmLvUserActive, _G.FarmTokenUserActive, _G.FarmEventUserActive = true, true, true
+    lastUserActionTime = tick()
+    if antiAfkLoopRunning then
+        antiAfkLoopRunning = false
+        WindUI:Notify({ Title = "📊 Anti AFK", Content = "❌ Đã tắt anti-afk", Duration = 3 })
+    end
+end
+
+do
+    local UIS = game:GetService("UserInputService")
+    UIS.InputBegan:Connect(function(i, g) if g or i.UserInputType == Enum.UserInputType.Gamepad1 then return end MarkUserActive() end)
+    UIS.InputChanged:Connect(function(_, g) if g then return end MarkUserActive() end)
+    UIS.InputEnded:Connect(function(_, g) if g then return end MarkUserActive() end)
+    UIS.TouchStarted:Connect(MarkUserActive); UIS.TouchMoved:Connect(MarkUserActive); UIS.TouchEnded:Connect(MarkUserActive)
+    UIS.WindowFocused:Connect(MarkUserActive); UIS.TextBoxFocused:Connect(MarkUserActive)
+    UIS.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.MouseButton2 then MarkUserActive() end end)
+end
+
+local function PressKeyEOnce()
+    pcall(function()
+        local VIM = game:GetService("VirtualInputManager")
+        VIM:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        VIM:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+    end)
+end
+
+local function StartSpamE()
+    if spamEActive then return end
+    spamEActive = true
+    if spamEConn then pcall(function() spamEConn:Disconnect() end) end
+    spamEConn = game:GetService("RunService").Heartbeat:Connect(function() if spamEActive then PressKeyEOnce() end end)
+end
+
+local function StopSpamE()
+    spamEActive = false
+    if spamEConn then pcall(function() spamEConn:Disconnect() end) spamEConn = nil end
+end
+
+-- ============================================================
+-- ===== WALL & TELEPORT FUNCTIONS ============================
+-- ============================================================
+CreateWall = function()
+    pcall(function() if wallModel then wallModel:Destroy() wallModel = nil end end)
+    wallModel = Instance.new("Model"); wallModel.Name = "FarmWall"
+    local wall = Instance.new("Part")
+    wall.Size, wall.Position = Vector3.new(200, 1, 200), WALL_POSITION
+    wall.Anchored, wall.CanCollide, wall.Transparency, wall.BrickColor, wall.Material = true, true, 0, BrickColor.new("White"), Enum.Material.SmoothPlastic
+    wall.Parent, wallModel.Parent = wallModel, workspace
+    return wallModel
+end
+
+CreateWallLv = function()
+    pcall(function() if wallModelLv then wallModelLv:Destroy() wallModelLv = nil end end)
+    wallModelLv = Instance.new("Model"); wallModelLv.Name = "FarmWallLv"
+    local wall = Instance.new("Part")
+    wall.Size, wall.Position = Vector3.new(200, 1, 200), WALL_POSITION
+    wall.Anchored, wall.CanCollide, wall.Transparency, wall.BrickColor, wall.Material = true, true, 0, BrickColor.new("White"), Enum.Material.SmoothPlastic
+    wall.Parent, wallModelLv.Parent = wallModelLv, workspace
+    return wallModelLv
+end
+
+TeleportWithEmote = function(position, cframe, isWall, isLv)
+    if not isWall then isCollecting = true end
+    if isLv then if isTeleportingLv then return end; isTeleportingLv = true
+    else if isTeleporting then return end; isTeleporting = true end
+    local player = game.Players.LocalPlayer
+    if not player or not player.Character then
+        if isLv then isTeleportingLv = false else isTeleporting = false end
+        isCollecting = false; return
+    end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        if isLv then isTeleportingLv = false else isTeleporting = false end
+        isCollecting = false; return
+    end
+    pcall(function() if cframe then hrp.CFrame = cframe else hrp.CFrame = CFrame.new(position) end end)
+    task.wait(0.05)
+    if isLv then isTeleportingLv = false else isTeleporting = false end
+    if isWall then isCollecting = false end
+end
+
+TeleportToWall = function()
+    if not wallModel then return end
+    TeleportWithEmote(Vector3.new(wallModel:GetPivot().Position.X, wallModel:GetPivot().Position.Y + 1, wallModel:GetPivot().Position.Z), nil, true, false)
+    task.wait(TELEPORT_TO_WALL_DELAY)
+end
+
+TeleportToWallLv = function()
+    if not wallModelLv then return end
+    TeleportWithEmote(Vector3.new(wallModelLv:GetPivot().Position.X, wallModelLv:GetPivot().Position.Y + 1, wallModelLv:GetPivot().Position.Z), nil, true, true)
+    task.wait(TELEPORT_TO_WALL_DELAY)
+end
+
+TeleportToWallSafe = function()
+    if isTeleportingToSafe then return end
+    isTeleportingToSafe = true
+    if not wallModel then CreateWall() task.wait(0.5) end
+    TeleportToWall(); isTeleportingToSafe = false
+end
+
+-- ============================================================
+-- ===== DOWNED PLAYER & RESCUE ===============================
+-- ============================================================
+local function FindDownedPlayer()
+    local Players, lp = game:GetService("Players"), game.Players.LocalPlayer
+    if not lp then return nil end
+    local closest, closestDist = nil, math.huge
+    local myPos = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") and lp.Character.HumanoidRootPart.Position
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= lp then
+            local char = player.Character
+            if char then
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if hum and (hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead) then
+                    local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChildWhichIsA("BasePart")
+                    if root then
+                        if myPos then
+                            local d = (myPos - root.Position).Magnitude
+                            if d < closestDist then closestDist = d; closest = player end
+                        else if not closest then closest = player end end
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+local function RescueModeWait(target, rootPart)
+    if not target or not target.Character or not rootPart then return false end
+    local lp2 = game.Players.LocalPlayer
+    TeleportWithEmote(rootPart.Position, nil, false, false)
+    local isRevived = false
+    while not isRevived and isRevivingActive do
+        if isCharacterDead or not target or not target.Character then break end
+        local hum = target.Character:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health > 0 then isRevived = true; break end
+        local curRoot = target.Character:FindFirstChild("HumanoidRootPart")
+        if not curRoot then break end
+        local lpRoot = lp2.Character and lp2.Character:FindFirstChild("HumanoidRootPart")
+        if lpRoot and (lpRoot.Position - curRoot.Position).Magnitude > 5 then TeleportWithEmote(curRoot.Position + (lpRoot.Position - curRoot.Position).Unit * 3, nil, false, false) end
+        if isRevivingActive then PressKeyEOnce() end
+        task.wait(0.1)
+    end
+    return isRevived
+end
+
+local function RescueModeFast(target)
+    if not target or not target.Character then return false end
+    local isRevived, loopCount, MAX_LOOPS = false, 0, 50
+    while not isRevived and isRevivingActive and loopCount < MAX_LOOPS do
+        if isCharacterDead or not target or not target.Character then break end
+        loopCount = loopCount + 1
+        local hum = target.Character:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health > 0 then isRevived = true; break end
+        local curRoot = target.Character:FindFirstChild("HumanoidRootPart")
+        if not curRoot then break end
+        StartSpamE(); TeleportWithEmote(curRoot.Position, nil, false, false); task.wait(0.2); StopSpamE()
+        if not wallModel then CreateWall() task.wait(0.3) end
+        SetFarmTokenStatus("❗ Teleporting - Wall_Safe"); TeleportToWallSafe(); task.wait(0.15)
+        if not target or not target.Character then break end
+        local hum2 = target.Character:FindFirstChildOfClass("Humanoid")
+        if not hum2 or hum2.Health > 0 then isRevived = true; break end
+    end
+    StopSpamE(); return isRevived
+end
+
+-- ============================================================
+-- ===== REVIVE LOOP & FARM LOOPS =============================
+-- ============================================================
+local function RevivePlayersLoop()
+    if reviveLoopRunning then return end
+    reviveLoopRunning = true
+
+    SetFarmTokenStatus("🔨 Đang tạo wall_safe"); CreateWall(); task.wait(2)
+    SetFarmTokenStatus("❗ Teleporting - Wall_Safe"); TeleportToWall(); task.wait(1)
+    isOnWallAndWaiting = true
+
+    while isRevivingActive do
+        if isCharacterDead then task.wait(0.5)
+        elseif isOnWallAndWaiting then
+            if IsModeBlocked() then task.wait(1)
+            else
+                SetFarmTokenStatus("🔎 Downed player - Đang quét")
+                local target = FindDownedPlayer()
+                if target then
+                    isOnWallAndWaiting = false
+                    local rootPart = target.Character and (target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("UpperTorso") or target.Character:FindFirstChild("Torso") or target.Character:FindFirstChildWhichIsA("BasePart"))
+                    if rootPart then
+                        CreateTargetESP(target)
+                        tokenCurrentTargetName = "@" .. target.Name
+                        tokenCurrentTargetPos = rootPart.Position
+                        if game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            tokenCurrentTargetDist = (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - rootPart.Position).Magnitude
+                        end
+                        reviveTarget = target
+                        SetFarmTokenStatus("👤 Revive player - @" .. target.Name)
+                        
+                        local isRevived = (farmMode == "Cứu nhanh") and RescueModeFast(target) or RescueModeWait(target, rootPart)
+
+                        if isRevived then
+                            reviveSuccessCount = reviveSuccessCount + 1
+                            tokenStatSuccess = tokenStatSuccess + 1
+                            SetFarmTokenStatus("✅ Revived successfully - " .. target.Name)
+                            MarkTargetESPSuccess(); task.wait(2)
+                        else
+                            tokenStatFail = tokenStatFail + 1
+                            SetFarmTokenStatus("❌ Revived Failure - " .. (target and target.Name or "?"))
+                            ClearTargetESP()
+                        end
+
+                        ClearTargetESP(); StopSpamE()
+                        if not isCharacterDead then SetFarmTokenStatus("❗ Teleporting - Wall_Safe"); TeleportToWallSafe() end
+                        task.wait(1); isOnWallAndWaiting = true
+                        tokenCurrentTargetName, tokenCurrentTargetPos = "—", nil
+                    end
+                else
+                    SetFarmTokenStatus("🔎 Downed player - Đang quét"); task.wait(1)
+                end
+            end
+        else task.wait(0.1) end
+    end
+    reviveLoopRunning, isOnWallAndWaiting = false, false
+end
+
+local function StartRevivePlayers()
+    if isRevivingActive then return end
+    isRevivingActive = true
+    reviveTarget, isOnWallAndWaiting, reviveSuccessCount = nil, false, 0
+    tokenStatSuccess, tokenStatFail, tokenStatDead = 0, 0, 0
+    tokenCurrentTargetName, tokenCurrentTargetPos = "—", nil
+    SaveCurrentPosition("token"); UpdateFarmConflict()
+    
+    SetFarmTokenStatus("⏳ Đang khởi động"); task.wait(2)
+    SetFarmTokenStatus("🔨 Đang tạo wall_safe"); CreateWall(); task.wait(2)
+    SetFarmTokenStatus("❗ Teleporting - Wall_Safe"); TeleportToWall(); task.wait(0.5)
+    
+    task.spawn(RevivePlayersLoop)
+end
+
+local function StopRevivePlayers()
+    isRevivingActive, reviveLoopRunning, reviveTarget, isOnWallAndWaiting = false, false, nil, false
+    UpdateFarmConflict(); StopSpamE(); ClearTargetESP(); ForceResetMovement()
+    if savedPosToken and savedPosTokenSet then
+        task.spawn(function() task.wait(0.3); TeleportToSavedPosition("token"); task.wait(0.3); ClearSavedPosition("token") end)
+    end
+end
+
+-- ===== FARM EVENT LOOP =====
+local function FarmEventLoop()
+    if not isFarming or IsModeBlocked() then 
+        task.wait(1)
+        if isFarming then FarmEventLoop() end
+        return 
+    end
+    
+    if not (HasAnyValidEventItem() or HasAnyValidSpecialItem()) then 
+        SetFarmEventStatus("🔴 Dừng... - Hết event")
+        task.wait(1)
+        if isFarming then FarmEventLoop() end
+        return 
+    end
+    
+    local player = game.Players.LocalPlayer
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not char or not hrp then 
+        SetFarmEventStatus("🟠 Đang xử lý... - Chờ spawn")
+        task.wait(0.3)
+        if isFarming then FarmEventLoop() end
+        return 
+    end
+    if isCollecting then 
+        task.wait(0.1)
+        if isFarming then FarmEventLoop() end
+        return 
+    end
+    
+    SetFarmEventStatus("🔎 Scan Items - Đang quét")
+    local items = getAllItems()
+    farmEventTargetName = FormatTargetItemsDisplay()
+    
+    if #items == 0 then
+        farmEventTargetPos = nil
+        ClearEventItemESP()
+        task.wait(0.4)
+        if isFarming then FarmEventLoop() end
+        return
+    end
+    
+    local playerPos = hrp.Position
+    table.sort(items, function(a, b) 
+        return (playerPos - a.Position).Magnitude < (playerPos - b.Position).Magnitude 
+    end)
+    
+    local target = items[1]
+    farmEventTargetPos, farmEventTargetDist = target.Position, (playerPos - target.Position).Magnitude
+    
+    CreateEventItemESP(target.Object, target.RawName or target.Name)
+    isCollecting = true
+    
+    if target.IsSpecial then
+        -- ===== SPECIAL: CHASE MODE =====
+        SetFarmEventStatus("⚡ Special Chase - " .. (target.RawName or target.Name))
+        
+        local function CollectItem(itemObject)
+            pcall(function()
+                local RS = game:GetService("ReplicatedStorage")
+                local collectId = itemObject.Parent:GetAttribute("Id") or itemObject:GetAttribute("Id") or "a19ac91bff904b7385e826fd6a23dc01"
+                if RS and RS.Events and RS.Events.Collectibles then 
+                    RS.Events.Collectibles.Invoke:InvokeServer(player, collectId, "Collect") 
+                end
+            end)
+        end
+        
+        local timeout = 0
+        local MAX_TIMEOUT = 5
+        local isVanished = false
+        
+        while timeout < MAX_TIMEOUT do
+            if not target.Object or not target.Object.Parent then
+                isVanished = true
+                break
+            end
+            
+            local currentHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            if currentHRP then
+                currentHRP.CFrame = CFrame.new(target.Object.Position)
+            end
+            
+            CollectItem(target.Object)
+            
+            task.wait(0.05)
+            timeout = timeout + 0.05
+        end
+        
+        if isVanished then
+            IncrementItemCount(target.Name)
+        end
+
+        if not isCharacterDead then
+            SetFarmEventStatus("❗ Teleporting - Wall_Safe")
+            TeleportToWallSafe()
+        end
+        
+        isCollecting = false
+        ClearEventItemESP()
+        task.wait(0.1)
+        
+    else
+        -- ===== EVENT: DELAY MODE =====
+        SetFarmEventStatus("👤 Đang teleporting " .. (target.RawName or target.Name))
+        TeleportWithEmote(target.Position, target.Object.CFrame, false, false)
+        task.wait(0.2)
+        
+        pcall(function()
+            local RS = game:GetService("ReplicatedStorage")
+            local collectId = target.Object.Parent:GetAttribute("Id") or target.Object:GetAttribute("Id") or "a19ac91bff904b7385e826fd6a23dc01"
+            if RS and RS.Events and RS.Events.Collectibles then 
+                RS.Events.Collectibles.Invoke:InvokeServer(player, collectId, "Collect") 
+            end
+        end)
+        
+        task.wait(2)
+        
+        IncrementItemCount(target.Name)
+        
+        isCollecting = false
+        ClearEventItemESP()
+        
+        if not isCharacterDead then
+            SetFarmEventStatus("❗ Teleporting - Wall_Safe")
+            TeleportToWallSafe()
+        end
+        task.wait(0.5)
+    end
+    
+    if isFarming then FarmEventLoop() end
+end
+
+local function StartFarmEvent()
+    if not (HasAnyValidEventItem() or HasAnyValidSpecialItem()) then 
+        Notify("❌ Không còn event", "Không có event để farm!", 4)
+        if farmEventToggle then farmEventToggle:Set(false) end
+        return 
+    end
+    if isFarming then return end
+    isFarming, isCollecting = true, false
+    InitItemCollectedCounts(); SaveCurrentPosition("event"); UpdateFarmConflict()
+    
+    SetFarmEventStatus("⏳ Đang khởi động"); task.wait(2)
+    SetFarmEventStatus("🔨 Đang tạo wall_safe"); CreateWall(); task.wait(2)
+    SetFarmEventStatus("❗ Teleporting - Wall_Safe"); TeleportToWall(); task.wait(0.3)
+    
+    task.spawn(FarmEventLoop)
+end
+
+local function StopFarmEvent()
+    isFarming, isCollecting = false, false
+    UpdateFarmConflict(); pcall(function() if wallModel then wallModel:Destroy() wallModel = nil end end); ForceResetMovement()
+    ClearEventItemESP()
+    if savedPosEvent and savedPosEventSet then task.spawn(function() task.wait(0.3); TeleportToSavedPosition("event"); task.wait(0.3); ClearSavedPosition("event") end) end
+end
+
+local function FarmLvLoop()
+    if not isFarmingLv or IsModeBlocked() then task.wait(1); if isFarmingLv then FarmLvLoop() end; return end
+    if not wallModelLv then SetFarmLvStatus("🔨 Đang tạo wall_safe"); CreateWallLv(); task.wait(2) end
+    SetFarmLvStatus("❗ Teleporting - Wall_Safe"); TeleportToWallLv()
+    SetFarmLvStatus("🟢 Đang chạy - Xử lý thao tác")
+    while isFarmingLv do
+        task.wait(1)
+        if not isFarmingLv then break end
+        if not IsModeBlocked() then SetFarmLvStatus("🟢 Đang chạy - Xử lý thao tác") end
+    end
+end
+
+local function StartFarmLv()
+    if isFarmingLv then return end
+    isFarmingLv = true; SaveCurrentPosition("lv"); UpdateFarmConflict()
+    SetFarmLvStatus("⏳ Đang khởi động"); task.wait(2)
+    SetFarmLvStatus("🔨 Đang tạo wall_safe"); CreateWallLv(); task.wait(2)
+    SetFarmLvStatus("❗ Teleporting - Wall_Safe"); TeleportToWallLv(); task.wait(0.5)
+    task.spawn(FarmLvLoop)
+end
+
+local function StopFarmLv()
+    isFarmingLv = false; UpdateFarmConflict(); pcall(function() if wallModelLv then wallModelLv:Destroy() wallModelLv = nil end end); ForceResetMovement()
+    if savedPosLv and savedPosLvSet then task.spawn(function() task.wait(0.3); TeleportToSavedPosition("lv"); task.wait(0.3); ClearSavedPosition("lv") end) end
+end
+
+local function ResetMiningStatistics()
+    tokenStatSuccess, tokenStatFail, tokenStatDead = 0, 0, 0
+    tokenCurrentTargetName, tokenCurrentTargetPos, tokenCurrentTargetDist = "—", nil, 0
+    farmEventTargetName, farmEventTargetPos, farmEventTargetDist = "—", nil, 0
+    farmEventAfkTimer, farmLvAfkTimer, farmTokenAfkTimer = 0, 0, 0
+    farmEventStatusText, farmLvStatusText, farmTokenStatusText = "⏳ Đang khởi động", "⏳ Đang khởi động", "⏳ Đang khởi động"
+    InitItemCollectedCounts()
+    if uiFarmEventText then uiFarmEventText:SetDesc("...") end
+    if uiFarmLvText then uiFarmLvText:SetDesc("...") end
+    if uiFarmTokenText then uiFarmTokenText:SetDesc("...") end
+    Notify("🔄 Reset thành công", "Đã reset toàn bộ số liệu", 3)
+end
+
+-- ============================================================
+-- ===== UI TAB FARM ==========================================
+-- ============================================================
+local comboSection = farmTab:Section({ Title = "Danh sách tổ hợp farm", Opened = false })
+uiFarmEventText = comboSection:Paragraph({ Title = "🎁 Farm Event", Desc = "..." })
+uiFarmLvText = comboSection:Paragraph({ Title = "📊 Farm Lv", Desc = "..." })
+uiFarmTokenText = comboSection:Paragraph({ Title = "💸 Farm Token", Desc = "..." })
+comboSection:Button({ Title = "Reset Mining Statistics", Desc = "Reset toàn bộ", Callback = function() ResetMiningStatistics() end })
+
+local extraSection = farmTab:Section({ Title = "Chức năng phụ", Opened = false })
+
+local autoJoinEnabled = false
+local autoJoinConn = nil
+local isCameraForced = false
+
+local function StartAutoJoin()
+    local clickX, clickY = LoadClickLocation()
+    
+    -- KIỂM TRA SETUP
+    if not clickX or not clickY then
+        Notify("❌ Location Click", "Bạn chưa setup để click 😡\nHãy ấn nút 'Set location click' trước!", 6)
+        return false
+    end
+    
+    if autoJoinConn then pcall(function() autoJoinConn:Disconnect() end) end
+    autoJoinEnabled = true
+    local lastClickTime = 0
+    
+    -- THÔNG BÁO BẬT THÀNH CÔNG
+    Notify("✔️ Location Click", "Đã phát hiện kích hoạt auto join game", 4)
+    
+    autoJoinConn = game:GetService("RunService").RenderStepped:Connect(function()
+        if not autoJoinEnabled then return end
+        
+        local player = game.Players.LocalPlayer
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        local isAlive = hrp and hum and hum.Health > 0
+        local dist = hrp and (hrp.Position - TARGET_XYZ).Magnitude or 99999
+        local isInLobby = (dist <= LOBBY_DISTANCE) or (not isAlive)
+
+        if isInLobby then
+            local currentTime = tick()
+            if currentTime - lastClickTime > 1.5 then
+                lastClickTime = currentTime
+                
+                -- THÔNG BÁO KHI Ở LOBBY VÀ THAO TÁC (Chỉ hiện 1 lần)
+                if not _G.LobbyNotified then
+                    _G.LobbyNotified = true
+                    Notify("🔎 Lobby Detect", "Phát hiện đang ở lobby đang thao tác", 3)
+                end
+
+                local camera = workspace.CurrentCamera
+                local camPos = camera.CFrame.Position
+                local lookDirection = (TARGET_XYZ - camPos).Unit
+                camera.CFrame = CFrame.lookAt(camPos, camPos + lookDirection)
+                isCameraForced = true
+                
+                task.spawn(function()
+                    task.wait(0.15)
+                    if not autoJoinEnabled then return end
+                    local VIM = game:GetService("VirtualInputManager")
+                    VIM:SendMouseButtonEvent(clickX, clickY, 0, true, game, 0)
+                    task.wait(0.05)
+                    VIM:SendMouseButtonEvent(clickX, clickY, 0, false, game, 0)
+                end)
+            end
+        else
+            if isCameraForced then
+                isCameraForced = false
+                pcall(function() camera.CameraType = Enum.CameraType.Custom end)
+            end
+        end
+    end)
+    return true
+end
+
+local function StopAutoJoin()
+    autoJoinEnabled = false
+    if autoJoinConn then pcall(function() autoJoinConn:Disconnect() end); autoJoinConn = nil end
+    isCameraForced = false
+    _G.LobbyNotified = false -- RESET LẠI BIẾN NÀY
+    pcall(function()
+        local camera = workspace.CurrentCamera
+        if camera then camera.CameraType = Enum.CameraType.Custom end
+    end)
+end
+
+-- ===== UI TOGGLES =====
+
+local antiPauseToggle = extraSection:Toggle({
+    Title = "Anti Gameplay Pause",
+    Desc = "Tắt thông báo pause + Auto AFK",
+    Value = true,
+    Flag = "AntiPause",
+    Callback = function(value)
+        if value then
+            pcall(function() game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(false) end)
+            antiAfkEnabled = true
+            lastUserActionTime = tick()
+        else
+            pcall(function() game:GetService("GuiService"):SetGameplayPausedNotificationEnabled(true) end)
+            antiAfkEnabled = false
+            antiAfkLoopRunning = false
+        end
+    end,
+})
+
+local autoJoinToggle = extraSection:Toggle({
+    Title = "Auto Join (Lobby)",
+    Desc = "Tự động vào trận (dùng toạ độ đã ghim)",
+    Value = false,
+    Flag = "AutoJoin",
+    Callback = function(state)
+        if state then
+            local success = StartAutoJoin()
+            if not success and autoJoinToggle then
+                autoJoinToggle:Set(false) -- Tự động tắt nếu chưa setup
+            end
+        else
+            StopAutoJoin()
+        end
+    end,
+})
+
+extraSection:Button({
+    Title = "Set location click",
+    Desc = "Bấm để mở GUI ghim toạ độ click (có nút Test)",
+    Callback = function()
+        if DeleteClickLocation() then
+            Notify("🗑️ Đã xoá toạ độ cũ", "Toạ độ click cũ đã được xoá, hãy ghim lại!", 3)
+        end
+        
+        local playerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+        if not playerGui then return end
+        
+        local oldGui = playerGui:FindFirstChild("AutoLobbyGUI")
+        if oldGui then oldGui:Destroy() end
+        
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "AutoLobbyGUI"
+        screenGui.ResetOnSpawn = false
+        screenGui.IgnoreGuiInset = true
+        screenGui.Parent = playerGui
+
+        local mainFrame = Instance.new("Frame")
+        mainFrame.AnchorPoint = Vector2.new(1, 1)
+        mainFrame.Position = UDim2.new(1, -10, 1, -10)
+        mainFrame.Size = UDim2.new(0, 320, 0, 210)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        mainFrame.BorderSizePixel = 3
+        mainFrame.BorderColor3 = Color3.fromRGB(0, 255, 0)
+        mainFrame.Parent = screenGui
+
+        local infoText = Instance.new("TextLabel")
+        infoText.Size = UDim2.new(1, -20, 0, 70)
+        infoText.Position = UDim2.new(0, 10, 0, 5)
+        infoText.BackgroundTransparency = 1
+        infoText.TextColor3 = Color3.fromRGB(0, 255, 0)
+        infoText.Font = Enum.Font.Code
+        infoText.TextSize = 14
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.Text = "BƯỚC 1: Click vào vị trí nút\n'Tham gia trò chơi' trên màn hình..."
+        infoText.Parent = mainFrame
+
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, -20, 0, 40)
+        clickBtn.Position = UDim2.new(0, 10, 0, 80)
+        clickBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+        clickBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        clickBtn.Font = Enum.Font.SourceSansBold
+        clickBtn.TextSize = 18
+        clickBtn.Text = "CHƯA GHIM"
+        clickBtn.Parent = mainFrame
+
+        local testBtn = Instance.new("TextButton")
+        testBtn.Size = UDim2.new(0.48, -15, 0, 40)
+        testBtn.Position = UDim2.new(0, 10, 0, 130)
+        testBtn.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        testBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        testBtn.Font = Enum.Font.SourceSansBold
+        testBtn.TextSize = 16
+        testBtn.Text = "TEST CLICK"
+        testBtn.Parent = mainFrame
+
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Size = UDim2.new(0.48, -15, 0, 40)
+        saveBtn.Position = UDim2.new(0.52, 5, 0, 130)
+        saveBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveBtn.Font = Enum.Font.SourceSansBold
+        saveBtn.TextSize = 16
+        saveBtn.Text = "LƯU & ĐÓNG"
+        saveBtn.Parent = mainFrame
+
+        local savedX, savedY = nil, nil
+        local savedWorldPos = nil
+        local UIS = game:GetService("UserInputService")
+        local GuiService = game:GetService("GuiService")
+        local Camera = workspace.CurrentCamera
+        
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+        
+        local function cleanNum(n)
+            local str = string.format("%.2f", n)
+            str = str:gsub("0+$", "")
+            str = str:gsub("%.$", "")
+            return str
+        end
+        
+        UIS.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if not savedX and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                local mouseLoc = UIS:GetMouseLocation()
+                
+                savedX = mouseLoc.X
+                savedY = mouseLoc.Y
+                
+                if game.Players.LocalPlayer.Character then
+                    raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character}
+                end
+                
+                local ray = Camera:ViewportPointToRay(savedX, savedY)
+                local hit = workspace:Raycast(ray.Origin, ray.Direction * 5000, raycastParams)
+                
+                if hit then
+                    savedWorldPos = hit.Position
+                else
+                    savedWorldPos = ray.Origin + ray.Direction * 500
+                end
+                
+                infoText.Text = string.format("ĐÃ GHIM:\nScreen: X=%.1f, Y=%.1f\nWorld: X=%s, Y=%s, Z=%s", 
+                    savedX, savedY,
+                    cleanNum(savedWorldPos.X), cleanNum(savedWorldPos.Y), cleanNum(savedWorldPos.Z))
+                    
+                clickBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+                clickBtn.Text = "ĐÃ GHIM (Click để đổi)"
+            end
+        end)
+        
+        testBtn.MouseButton1Click:Connect(function()
+            if not savedX or not savedY then
+                Notify("⚠️ Chưa ghim", "Hãy click vào màn hình để ghim toạ độ trước!", 3)
+                return
+            end
+            
+            if savedWorldPos then
+                local camPos = Camera.CFrame.Position
+                local lookDirection = (savedWorldPos - camPos).Unit
+                Camera.CFrame = CFrame.lookAt(camPos, camPos + lookDirection)
+            end
+            
+            task.wait(0.15)
+            
+            local VIM = game:GetService("VirtualInputManager")
+            VIM:SendMouseButtonEvent(savedX, savedY, 0, true, game, 0)
+            task.wait(0.05)
+            VIM:SendMouseButtonEvent(savedX, savedY, 0, false, game, 0)
+            
+            Notify("🖱️ Test Click", "Đã click tại X=" .. savedX .. ", Y=" .. savedY, 3)
+        end)
+        
+        saveBtn.MouseButton1Click:Connect(function()
+            if savedX and savedY then
+                SaveClickLocation(savedX, savedY)
+                Notify("✅ Đã lưu", "Toạ độ đã lưu vào " .. LOCATION_FILE, 4)
+                screenGui:Destroy()
+            else
+                Notify("⚠️ Chưa ghim", "Hãy click vào màn hình để ghim toạ độ trước!", 3)
+            end
+        end)
+    end,
+})
+
+extraSection:Toggle({
+    Title = "Auto Execute",
+    Desc = "Tự động lưu script và khởi động lại khi join server",
+    Value = true,
+    Flag = "AutoExecute",
+    Callback = function(state)
+        if state then
+            EnsureFolder()
+            SaveExecuteFile()
+            if type(queue_on_teleport) == "function" then pcall(function() queue_on_teleport(AUTO_EXECUTE_CMD) end) end
+            Notify("✅ Auto Execute", "Đã bật! Đang tự động lưu...", 5)
+        else
+            pcall(function() if type(queue_on_teleport) == "function" then queue_on_teleport("") end end)
+            Notify("❌ Auto Execute", "Đã tắt", 3)
+        end
+    end,
+})
+
+extraSection:Toggle({
+    Title = "Auto Reconnect",
+    Desc = "Tự động vào lại server khi mất kết nối",
+    Value = true,
+    Flag = "AutoReconnect",
+    Callback = function(state)
+        if state then
+            Notify("✅ Auto Reconnect", "Đã bật - Sẽ tự động load lại khi bị ngắt", 4)
+        else
+            Notify("❌ Auto Reconnect", "Đã tắt", 3)
+        end
+    end,
+})
+
+local farmModeDropdown = farmTab:Dropdown({ 
+    Title = "Farm Mode (Revive Players)", Desc = "Chọn chế độ cứu", 
+    Values = {"Cứu nhanh", "Chờ cứu"}, Value = "Chờ cứu", 
+    Flag = "FarmMode",
+    Callback = function(option) farmMode = option or "Chờ cứu" end 
+})
+
+farmEventToggle = farmTab:Toggle({ 
+    Title = "Farm Event", Desc = "Tự động farm items sự kiện", 
+    Value = false, 
+    Flag = "FarmEvent",
+    Callback = function(value) if value then StartFarmEvent() else StopFarmEvent() end end 
+})
+
+farmLvToggle = farmTab:Toggle({ 
+    Title = "Farm Lv", Desc = "Treo tường farm level", 
+    Value = false, 
+    Flag = "FarmLv",
+    Callback = function(value) if value then StartFarmLv() else StopFarmLv() end end 
+})
+
+reviveToggle = farmTab:Toggle({ 
+    Title = "Revive Players (Farm Token)", Desc = "Tự động cứu người chơi", 
+    Value = false, 
+    Flag = "RevivePlayers",
+    Callback = function(value) if value then StartRevivePlayers() else StopRevivePlayers() end end 
+})
+
+-- ============================================================
+-- ===== REALTIME UPDATE TEXT (ĐÃ SẮP XẾP CHUẨN) ==============
+-- ============================================================
+task.spawn(function()
+    local lastTickEvent, lastTickLv, lastTickToken = tick(), tick(), tick()
+    local lastScanTime, cachedScanText = 0, ""
+    
+    while task.wait(0.5) do
+        local now = tick()
+        
+        -- 1. TÍNH TOÁN THỜI GIAN AFK
+        if isFarming then
+            local delta = now - lastTickEvent
+            lastTickEvent = now
+            if _G.FarmEventUserActive then farmEventAfkTimer = 0; _G.FarmEventUserActive = false 
+            else farmEventAfkTimer = farmEventAfkTimer + delta end
+        else lastTickEvent = now end
+        
+        if isFarmingLv then
+            local delta = now - lastTickLv
+            lastTickLv = now
+            if _G.FarmLvUserActive then farmLvAfkTimer = 0; _G.FarmLvUserActive = false 
+            else farmLvAfkTimer = farmLvAfkTimer + delta end
+        else lastTickLv = now end
+        
+        if isRevivingActive then
+            local delta = now - lastTickToken
+            lastTickToken = now
+            if _G.FarmTokenUserActive then farmTokenAfkTimer = 0; _G.FarmTokenUserActive = false 
+            else farmTokenAfkTimer = farmTokenAfkTimer + delta end
+        else lastTickToken = now end
+
+        -- 2. CẬP NHẬT SCAN ITEM
+        if now - lastScanTime >= 2 then 
+            lastScanTime = now
+            cachedScanText = FormatScanEventItemsDisplay() 
+        end
+        
+        local livePos = nil
+        local char = game.Players.LocalPlayer.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then livePos = hrp.Position end
+        end
+
+        -- 3. CẬP NHẬT TEXT FARM EVENT (ĐÚNG THỨ TỰ MÀY YÊU CẦU)
+        if uiFarmEventText then
+            if isFarming then
+                local info = "Target items: " .. (farmEventTargetName or "—")
+                if farmEventTargetPos and livePos then 
+                    info = info .. string.format("\nLocation: (%.1f, %.1f, %.1f) - %.1f studs", 
+                        farmEventTargetPos.X, farmEventTargetPos.Y, farmEventTargetPos.Z, (livePos - farmEventTargetPos).Magnitude)
+                else 
+                    info = info .. "\nLocation: " .. locationDots 
+                end
+                info = info .. "\nPlayers: " .. playerCountNow
+                info = info .. "\nCounter AFK: " .. FormatTime(farmEventAfkTimer)
+                
+                info = info .. "\n\n----------------------------------------------------------------"
+                
+                info = info .. "\nFPS: " .. currentFps .. " | CPU: " .. currentCpu .. " | Ping: " .. currentPing .. " | GPU: " .. currentGpu
+                
+                if currentIsInLobby then
+                    info = info .. "\nStatus Farm: ❗Lobby detected - Đang ở lobby chờ joined"
+                else
+                    info = info .. "\nStatus Farm: " .. farmEventStatusText
+                end
+                
+                info = info .. "\n\nScan EventItems:\n" .. cachedScanText
+                
+                uiFarmEventText:SetDesc(info)
+            else 
+                uiFarmEventText:SetDesc("...") 
+            end
+        end
+
+        -- 4. CẬP NHẬT TEXT FARM LV (ĐÚNG THỨ TỰ)
+        if uiFarmLvText then
+            if isFarmingLv then
+                local info = "FPS: " .. currentFps .. " | CPU: " .. currentCpu .. " | Ping: " .. currentPing .. " | GPU: " .. currentGpu
+                info = info .. "\nPlayers: " .. playerCountNow
+                info = info .. "\nLocation: " .. (livePos and string.format("(%.1f, %.1f, %.1f)", livePos.X, livePos.Y, livePos.Z) or "—")
+                info = info .. "\nCounter AFK: " .. FormatTime(farmLvAfkTimer)
+                
+                if currentIsInLobby then
+                    info = info .. "\nStatus Farm: ❗Lobby detected - Đang ở lobby chờ joined"
+                else
+                    info = info .. "\nStatus Farm: " .. farmLvStatusText
+                end
+                
+                uiFarmLvText:SetDesc(info)
+            else 
+                uiFarmLvText:SetDesc("...") 
+            end
+        end
+
+        -- 5. CẬP NHẬT TEXT FARM TOKEN (ĐÚNG THỨ TỰ)
+        if uiFarmTokenText then
+            if isRevivingActive then
+                local info = "Target Players: " .. tokenCurrentTargetName
+                info = info .. "\nFarm Mode: " .. farmMode
+                info = info .. "\nPlayers: " .. playerCountNow
+                info = info .. "\nFPS: " .. currentFps .. " | CPU: " .. currentCpu .. " | Ping: " .. currentPing .. " | GPU: " .. currentGpu
+                
+                if tokenCurrentTargetPos and livePos then 
+                    info = info .. string.format("\nLocation: (%.1f, %.1f, %.1f) - %.1f studs", 
+                        tokenCurrentTargetPos.X, tokenCurrentTargetPos.Y, tokenCurrentTargetPos.Z, (livePos - tokenCurrentTargetPos).Magnitude)
+                else 
+                    info = info .. "\nLocation: " .. locationDots 
+                end
+                
+                info = info .. "\nCounter AFK: " .. FormatTime(farmTokenAfkTimer)
+                info = info .. "\nPlayer Success: " .. tokenStatSuccess
+                info = info .. "\nThe user is dead: " .. tokenStatDead
+                
+                if currentIsInLobby then
+                    info = info .. "\nStatus Farm: ❗Lobby detected - Đang ở lobby chờ joined"
+                else
+                    info = info .. "\nStatus Farm: " .. farmTokenStatusText
+                end
+                
+                uiFarmTokenText:SetDesc(info)
+            else 
+                uiFarmTokenText:SetDesc("...") 
+            end
+        end
+    end
+end)
+
+-- ============================================================
+-- ===== WINDUI CONFIG LOAD & SAVE TỰ ĐỘNG ====================
+-- ============================================================
+task.spawn(function()
+    task.wait(2)
+    pcall(function() myConfig:Load() end)
+end)
+
+task.spawn(function()
+    while task.wait(10) do
+        pcall(function() myConfig:Save() end)
+    end
+end)
+
+-- ============================================================
+-- ===== CHARACTER ADDED ======================================
+-- ============================================================
+game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+    isCharacterDead, isFarmBlocked = false, false
+    if isFarming then
+        task.wait(2); isCollecting = false; SetFarmEventStatus("🔨 Đang tạo wall_safe"); CreateWall(); task.wait(2)
+        SetFarmEventStatus("❗ Teleporting - Wall_Safe"); TeleportToWall()
+    end
+    if isFarmingLv then
+        task.wait(2)
+        if wallModelLv then SetFarmLvStatus("🔨 Đang tạo wall_safe"); CreateWallLv(); task.wait(2); SetFarmLvStatus("❗ Teleporting - Wall_Safe"); TeleportToWallLv() end
+    end
+    if isRevivingActive then
+        task.wait(2); isCollecting = false; SetFarmTokenStatus("🔨 Đang tạo wall_safe"); CreateWall(); task.wait(2)
+        SetFarmTokenStatus("❗ Teleporting - Wall_Safe"); TeleportToWall()
+    end
+end)
+
+-- ============================================================
+-- ===== TAB: FILES/MUSIC =====================================
+-- ============================================================
+local MusicTab = Window:Tab({ Title = "Files/Music", Icon = "folder" })
+MusicTab:Section({ Title = "Danh sách và cách sử dụng" })
+
+local SUPPORTED_EXTS = {".mp3", ".ogg", ".wav", ".flac"}
+local musicList, musicPathMap, currentSound, selectedTrack = {}, {}, nil, nil
+local autoPlayEnabled, gameMuted, gameSoundsBackup = false, false, {}
+
+local function muteGameSounds(exceptSound)
+    if gameMuted then return end
+    gameSoundsBackup = {}
+    for _, obj in ipairs(game:GetDescendants()) do
+        if obj:IsA("Sound") and obj ~= exceptSound then
+            if obj.Parent and obj.Parent ~= workspace then
+                table.insert(gameSoundsBackup, { sound = obj, volume = obj.Volume })
+                obj.Volume = 0
+            end
+        end
+    end
+    gameMuted = true
+end
+
+local function restoreGameSounds()
+    if not gameMuted then return end
+    for _, entry in ipairs(gameSoundsBackup) do
+        if entry.sound and entry.sound.Parent then pcall(function() entry.sound.Volume = entry.volume end) end
+    end
+    gameSoundsBackup = {}
+    gameMuted = false
+end
+
+local function checkSupport()
+    local support = { readFile = false, playMusic = false, permission = false }
+    local ok1, files = pcall(listfiles, "")
+    if ok1 and type(files) == "table" then support.readFile = true end
+    local ok2 = pcall(function() return getcustomasset end)
+    if ok2 and type(getcustomasset) == "function" then support.playMusic = true end
+    if ok1 and files then support.permission = true end
+    return support
+end
+
+local support = checkSupport()
+local function emoji(bool) return bool and "✅" or "❌" end
+
+MusicTab:Paragraph({
+    Title = "🔎 Hướng dẫn sử dụng",
+    Desc = "1. Dropdown để chọn các music để phát nhạc\n" ..
+           "2. Button \"Reset list\" để update lại danh sách music trong Dropdown\n" ..
+           "3. Toggle \"Auto Start/Music\" để bật music tự động, khi music hết thì tự phát lại, tự nhiên tắt thì phát lại nhạc\n\n" ..
+           "Định dạng đuôi file music: mp3, ogg, wav, flac | Không giới hạn thời gian/Dung lượng của file nhạc\n\n" ..
+           "❗Lưu ý: các chức năng của client phải được phép đọc file music đồng thời người dùng phải cấp quyền mới có thể phát và đọc file để phát\n\n" ..
+           "Functional support:\n" ..
+           "• Đọc file nhạc: " .. emoji(support.readFile) .. "\n" ..
+           "• Phát nhạc: " .. emoji(support.playMusic) .. "\n" ..
+           "• Cấp quyền truy cập file: " .. emoji(support.permission) .. "\n" ..
+           "-------------------------------------------\n\n" ..
+           "🎵 Hướng dẫn ID Music (Roblox):\n" ..
+           "1. Nhập ID sound Roblox vào ô Input (ví dụ: 1837879082).\n" ..
+           "2. Bật Toggle \"Auto Start/Audio\" để tự động phát sound từ ID.\n" ..
+           "3. Khi sound hết → tự động phát lại.\n" ..
+           "4. Khi sound đang phát mà bị ngắt → tự động phát lại.\n" ..
+           "5. Miễn còn bật Toggle thì sound sẽ tự động phát liên tục.\n\n" ..
+           "❗Lưu ý: ID sound phải là ID hợp lệ của Roblox và đã được public.\n" ..
+           "Nếu ID bị private hoặc không tồn tại, sound sẽ không phát được.",
+    Color = "Blue", Image = "rbxassetid://10723407389", ImageSize = 40,
+})
+
+MusicTab:Section({ Title = "File Music" })
+
+local FileInfo = MusicTab:Paragraph({
+    Title = "📁 File information",
+    Desc = "File name: — | —\n" .. "Time of music: 00:00 - 00:00\n" .. "Memory of music: —",
+    Color = "Green",
+})
+
+local function formatTime(sec) sec = math.floor(sec or 0); return string.format("%02d:%02d", math.floor(sec / 60), sec % 60) end
+local function formatDate(isoString)
+    if not isoString or isoString == "" then return "—" end
+    local y, m, d = string.match(isoString, "^(%d+)-(%d+)-(%d+)")
+    if y and m and d then return string.format("%s/%s/%s", d, m, y) end
+    return "—"
+end
+
+local function estimateSize(durationSec)
+    local bytes = durationSec * 16 * 1024
+    if bytes >= 1024 * 1024 then return string.format("%.2f MB", bytes / (1024 * 1024))
+    elseif bytes >= 1024 then return string.format("%.2f KB", bytes / 1024) end
+    return bytes .. " B"
+end
+
+local function checkSound(assetId, waitSeconds)
+    waitSeconds = waitSeconds or 7
+    local tempSound = Instance.new("Sound")
+    tempSound.SoundId = assetId
+    tempSound.Volume = 0
+    tempSound.Parent = workspace
+    local waited = 0
+    while waited < waitSeconds do task.wait(0.1); waited = waited + 0.1 end
+    local ok = tempSound.IsLoaded and tempSound.TimeLength > 0
+    local reason = ""
+    if not ok then
+        if not tempSound.IsLoaded then reason = "Không load được sound (asset có thể bị private, không tồn tại, hoặc sai định dạng)"
+        elseif tempSound.TimeLength <= 0 then reason = "Sound không có thời lượng (file bị hỏng hoặc định dạng không được Roblox hỗ trợ)"
+        else reason = "Không xác định được lỗi" end
+    end
+    local timeLength = tempSound.TimeLength
+    tempSound:Destroy()
+    return ok, reason, timeLength
+end
+
+local function checkLocalFile(path, waitSeconds)
+    waitSeconds = waitSeconds or 7
+    local ok, assetId = pcall(getcustomasset, path)
+    if not ok then return false, "Không tạo được asset từ file (file không tồn tại hoặc client không hỗ trợ)", 0 end
+    return checkSound(assetId, waitSeconds)
+end
+
+local function startFileInfoLoop(sound, filename)
+    local nameOnly, ext = string.match(filename, "^(.-)(%.%w+)$")
+    nameOnly = nameOnly or filename
+    ext = ext or ""
+    task.spawn(function()
+        local waited = 0
+        while sound.TimeLength <= 0 and waited < 3 do task.wait(0.1); waited = waited + 0.1 end
+        while sound and sound.Parent do
+            local cur, total = sound.TimePosition or 0, sound.TimeLength or 0
+            pcall(function()
+                FileInfo:SetDesc("File name: " .. nameOnly .. " | " .. ext .. "\nTime of music: " .. formatTime(cur) .. " - " .. formatTime(total) .. "\nMemory of music: " .. (total > 0 and estimateSize(total) or "—"))
+            end)
+            task.wait(0.5)
+        end
+    end)
+end
+
+local function isSupported(filename)
+    local lower = string.lower(filename)
+    for _, ext in ipairs(SUPPORTED_EXTS) do if string.sub(lower, -#ext) == ext then return true end end
+    return false
+end
+
+local function refreshMusicList()
+    musicList, musicPathMap = {}, {}
+    local ok, files = pcall(listfiles, "")
+    if ok and files then
+        for _, filePath in ipairs(files) do
+            local filename = string.match(filePath, "([^/\\]+)$") or filePath
+            if isSupported(filename) then table.insert(musicList, filename); musicPathMap[filename] = filePath end
+        end
+    end
+    if #musicList == 0 then table.insert(musicList, "Không tìm thấy tệp nhạc") end
+    return musicList
+end
+
+local function stopCurrent()
+    if currentSound then pcall(function() currentSound:Stop() end); pcall(function() currentSound:Destroy() end); currentSound = nil end
+    restoreGameSounds()
+end
+
+local function playSelected()
+    if not selectedTrack or selectedTrack == "Không tìm thấy tệp nhạc" then return end
+    local path = musicPathMap[selectedTrack]
+    if not path then return end
+    local ok, assetId = pcall(getcustomasset, path)
+    if not ok then WindUI:Notify({ Title = "❌ Checkout Sound", Content = "Không tải được file: " .. selectedTrack, Duration = 3 }); return end
+    stopCurrent()
+    local sound = Instance.new("Sound")
+    sound.SoundId, sound.Volume, sound.Looped, sound.Parent = assetId, 0.5, false, workspace
+    currentSound = sound
+    muteGameSounds(sound); sound:Play(); startFileInfoLoop(sound, selectedTrack)
+    sound.Ended:Connect(function()
+        if autoPlayEnabled and currentSound == sound then task.wait(0.3); if autoPlayEnabled then sound:Play() end
+        else restoreGameSounds() end
+    end)
+    sound:GetPropertyChangedSignal("Playing"):Connect(function()
+        if autoPlayEnabled and currentSound == sound and not sound.Playing then
+            task.wait(1)
+            if autoPlayEnabled and currentSound == sound and not sound.Playing then pcall(function() sound:Play() end) end
+        elseif not autoPlayEnabled and currentSound == sound and not sound.Playing then restoreGameSounds() end
+    end)
+end
+
+local checkingFile = false
+local function updateFileInfo(filename, path)
+    if not filename then FileInfo:SetDesc("File name: — | —\nTime of music: 00:00 - 00:00\nMemory of music: —"); return end
+    local nameOnly, ext = string.match(filename, "^(.-)(%.%w+)$")
+    nameOnly, ext = nameOnly or filename, ext or ""
+    local totalTime = 0
+    if path then
+        local ok, assetId = pcall(getcustomasset, path)
+        if ok then
+            local tempSound = Instance.new("Sound")
+            tempSound.SoundId = assetId; tempSound.Parent = workspace
+            local waited = 0
+            while tempSound.TimeLength <= 0 and waited < 3 do task.wait(0.1); waited = waited + 0.1 end
+            totalTime = tempSound.TimeLength or 0
+            tempSound:Destroy()
+        end
+    end
+    FileInfo:SetDesc("File name: " .. nameOnly .. " | " .. ext .. "\nTime of music: " .. formatTime(0) .. " - " .. formatTime(totalTime) .. "\nMemory of music: " .. (totalTime > 0 and estimateSize(totalTime) or "—"))
+end
+
+local function onSelectMusic(option)
+    if checkingFile then return end
+    if not option or option == "Không tìm thấy tệp nhạc" then selectedTrack = nil; updateFileInfo(nil); return end
+    checkingFile, selectedTrack = true, option
+    local path = musicPathMap[option]
+    WindUI:Notify({ Title = "🔎 Checking & filtering music", Content = "Đang tải và kiểm tra " .. option .. "...", Duration = 3 })
+    task.spawn(function()
+        local ok, reason, timeLength = checkLocalFile(path, 7)
+        if not ok then WindUI:Notify({ Title = "❌ Checkout Sound", Content = "Không phát được: " .. option .. "\nLý do: " .. reason, Duration = 3 }); checkingFile = false; return end
+        local nameOnly, ext = string.match(option, "^(.-)(%.%w+)$")
+        nameOnly, ext = nameOnly or option, ext or ""
+        FileInfo:SetDesc("File name: " .. nameOnly .. " | " .. ext .. "\nTime of music: 00:00 - " .. formatTime(timeLength) .. "\nMemory of music: " .. estimateSize(timeLength))
+        WindUI:Notify({ Title = "✅ Checkout Sound", Content = "Kiểm tra hoàn tất đợi khoảng 4 giây sẽ phát", Duration = 3 })
+        task.wait(4)
+        if autoPlayEnabled then playSelected() end
+        checkingFile = false
+    end)
+end
+
+local Dropdown = MusicTab:Dropdown({ Title = "Chọn nhạc", Desc = "Danh sách nhạc trong workspace Delta", Values = refreshMusicList(), Value = nil, Multi = false, AllowNone = true, Callback = onSelectMusic })
+
+MusicTab:Button({
+    Title = "Reset list", Desc = "Quét lại danh sách nhạc trong workspace",
+    Callback = function()
+        local newList = refreshMusicList()
+        Dropdown:Refresh(newList)
+        selectedTrack = nil; updateFileInfo(nil)
+        WindUI:Notify({ Title = "Reset list", Content = "Đã cập nhật: " .. #newList .. " bài", Duration = 3 })
+    end,
+})
+
+MusicTab:Toggle({ Title = "Auto Start/Music", Desc = "Tự động phát, lặp lại và tự phát lại khi bị gián đoạn", Value = false, Callback = function(state) autoPlayEnabled = state; if state then playSelected() else stopCurrent() end end })
+
+MusicTab:Section({ Title = "ID Music" })
+local currentAudio, autoAudioEnabled, currentAudioId = nil, false, nil
+local AudioInfo = MusicTab:Paragraph({ Title = "🎶 Audio roblox", Desc = "Audio creator: —\nAudio name: —\nTarget asset ID: —\nDate created: —\nAudio length: 00:00 - 00:00", Color = "Orange" })
+
+local function startAudioInfoLoop(sound)
+    task.spawn(function()
+        local waited = 0
+        while sound.TimeLength <= 0 and waited < 3 do task.wait(0.1); waited = waited + 0.1 end
+        local creatorName, audioName, dateCreated = "—", "—", "—"
+        local okInfo, info = pcall(function() return game:GetService("MarketplaceService"):GetProductInfoAsync(tonumber(currentAudioId), Enum.InfoType.Asset) end)
+        if okInfo and info then
+            if info.Creator then creatorName = info.Creator.Name or "—" end
+            if info.Name then audioName = info.Name end
+            if info.Created then dateCreated = formatDate(info.Created) end
+        end
+        while sound and sound.Parent do
+            pcall(function() AudioInfo:SetDesc("Audio creator: " .. creatorName .. "\nAudio name: " .. audioName .. "\nTarget asset ID: " .. tostring(currentAudioId) .. "\nDate created: " .. dateCreated .. "\nAudio length: " .. formatTime(sound.TimePosition) .. " - " .. formatTime(sound.TimeLength)) end)
+            task.wait(0.5)
+        end
+    end)
+end
+
+local function stopAudio()
+    if currentAudio then pcall(function() currentAudio:Stop() end); pcall(function() currentAudio:Destroy() end); currentAudio = nil end
+    restoreGameSounds()
+end
+
+local function playAudioById()
+    if not currentAudioId or currentAudioId == "" then WindUI:Notify({ Title = "❌ Checkout Sound", Content = "Chưa nhập ID sound!", Duration = 3 }); return end
+    stopAudio()
+    local sound = Instance.new("Sound")
+    sound.SoundId, sound.Volume, sound.Looped, sound.Parent = "rbxassetid://" .. tostring(currentAudioId), 0.5, false, workspace
+    currentAudio = sound
+    muteGameSounds(sound)
+    local ok, err = pcall(function() sound:Play() end)
+    if not ok then WindUI:Notify({ Title = "❌ Checkout Sound", Content = "ID không hợp lệ hoặc bị private.", Duration = 3 }); restoreGameSounds(); return end
+    startAudioInfoLoop(sound)
+    sound.Ended:Connect(function() if autoAudioEnabled and currentAudio == sound then task.wait(0.3); if autoAudioEnabled then pcall(function() sound:Play() end) end else restoreGameSounds() end end)
+    sound:GetPropertyChangedSignal("Playing"):Connect(function()
+        if autoAudioEnabled and currentAudio == sound and not sound.Playing then
+            task.wait(1)
+            if autoAudioEnabled and currentAudio == sound and not sound.Playing then pcall(function() sound:Play() end) end
+        elseif not autoAudioEnabled and currentAudio == sound and not sound.Playing then restoreGameSounds() end
+    end)
+end
+
+local checkingAudio, lastCheckedId = false, nil
+local function onInputId(text)
+    currentAudioId = text
+    if not text or text == "" then AudioInfo:SetDesc("Audio creator: —\nAudio name: —\nTarget asset ID: —\nDate created: —\nAudio length: 00:00 - 00:00"); return end
+    local targetId = tostring(text)
+    task.spawn(function()
+        local ok, info = pcall(function() return game:GetService("MarketplaceService"):GetProductInfoAsync(tonumber(targetId), Enum.InfoType.Asset) end)
+        local creatorName, audioName, dateCreated = "—", "—", "—"
+        if ok and info then
+            if info.Creator then creatorName = info.Creator.Name or "—" end
+            if info.Name then audioName = info.Name end
+            if info.Created then dateCreated = formatDate(info.Created) end
+        end
+        AudioInfo:SetDesc("Audio creator: " .. creatorName .. "\nAudio name: " .. audioName .. "\nTarget asset ID: " .. targetId .. "\nDate created: " .. dateCreated .. "\nAudio length: 00:00 - 00:00")
+    end)
+    if checkingAudio or text == lastCheckedId then return end
+    lastCheckedId, checkingAudio = text, true
+    WindUI:Notify({ Title = "🔎 Checking & filtering music", Content = "Đang tải và kiểm tra ID " .. text .. "...", Duration = 3 })
+    task.spawn(function()
+        local ok, reason, timeLength = checkSound("rbxassetid://" .. tostring(text), 7)
+        if not ok then WindUI:Notify({ Title = "❌ Checkout Sound", Content = "Không phát được ID " .. text .. "\nLý do: " .. reason, Duration = 3 }); checkingAudio = false; return end
+        task.spawn(function()
+            local okInfo, info = pcall(function() return game:GetService("MarketplaceService"):GetProductInfoAsync(tonumber(text), Enum.InfoType.Asset) end)
+            local creatorName, audioName, dateCreated = "—", "—", "—"
+            if okInfo and info then
+                if info.Creator then creatorName = info.Creator.Name or "—" end
+                if info.Name then audioName = info.Name end
+                if info.Created then dateCreated = formatDate(info.Created) end
+            end
+            AudioInfo:SetDesc("Audio creator: " .. creatorName .. "\nAudio name: " .. audioName .. "\nTarget asset ID: " .. text .. "\nDate created: " .. dateCreated .. "\nAudio length: 00:00 - " .. formatTime(timeLength))
+        end)
+        WindUI:Notify({ Title = "✅ Checkout Sound", Content = "Kiểm tra hoàn tất đợi khoảng 4 giây sẽ phát", Duration = 3 })
+        task.wait(4)
+        if autoAudioEnabled then playAudioById() end
+        checkingAudio = false
+    end)
+end
+
+local IdInput = MusicTab:Input({ Title = "Nhập ID Sound Roblox", Desc = "Ví dụ: 1837879082", Value = "", Placeholder = "Nhập ID sound...", Callback = onInputId })
+MusicTab:Toggle({ Title = "Auto Start/Audio", Desc = "Tự động phát sound từ ID, lặp lại khi hết hoặc bị ngắt", Value = false, Callback = function(state) autoAudioEnabled = state; if state then playAudioById() else stopAudio() end end })
+
+-- ===== THÔNG BÁO KHI LOAD XONG =====
+WindUI:Notify({
+    Title = "Anh ba gay",
+    Content = "Đã fix không hiện UI",
+    Duration = 5,
+})
+
+print("✅ Evade Event Farm v13.1.1 (WindUI) đã load!")
+print("🔧 Đã reset biến _G.LobbyNotified khi tắt Auto Join.")
+print("🎵 Music Tab: Đầy đủ")
