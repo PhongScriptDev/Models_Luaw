@@ -46,8 +46,8 @@
         .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
         .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ca8a04, var(--primary)); transition: width 0.4s ease; }
         
-        input[type="text"], input[type="password"] { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; font-family: 'Fira Code'; font-size: 14px; }
-        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+        input[type="text"], input[type="password"], select { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; font-family: 'Fira Code'; font-size: 14px; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
         
         .btn-main { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 10px; }
         .btn-main:hover { background: #fff; }
@@ -83,7 +83,7 @@
         .admin-overlay.active { display: block; }
         .form-group { margin-bottom: 15px; text-align: left; }
         .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 6px; font-family: 'Fira Code'; font-size: 12px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 6px; font-family: 'Fira Code'; font-size: 12px; }
         .form-group textarea { height: 150px; resize: vertical; }
         .close-admin { position: absolute; top: 10px; right: 15px; color: var(--danger); background: none; border: none; font-size: 24px; cursor: pointer; width: auto; padding: 0; }
         
@@ -229,6 +229,15 @@
             <label>IP Admin (Hiện tại: <span id="cur-ip"></span>)</label>
             <input type="text" id="admin-ip" placeholder="Nhập IP của bạn...">
         </div>
+
+        <div class="form-group">
+            <label>Chọn kiểu mã hóa:</label>
+            <select id="encode-method">
+                <option value="type1">Type 1: Mảng số (Table Encode)</option>
+                <option value="type2">Type 2: Chuỗi Char (String.char)</option>
+            </select>
+        </div>
+
         <div class="form-group">
             <label>Code Lua (Dán code gốc vào đây trước khi mã hóa)</label>
             <textarea id="admin-code" placeholder="Dán code Lua thô vào đây..."></textarea>
@@ -261,6 +270,7 @@
         
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+        // HÀM GIẢI MÃ CẤU HÌNH
         function encryptDecrypt(text) {
             let result = "";
             for (let i = 0; i < text.length; i++) {
@@ -521,71 +531,70 @@
         }
 
         // ==========================================
-        // HÀM OBFUSCATION SIÊU CẤP (MÃ HÓA CHUỖI)
+        // HÀM OBFUSCATION (2 CHẾ ĐỘ)
         // ==========================================
         async function obfuscateAdminCode() {
             const rawCode = document.getElementById('admin-code').value;
+            const method = document.getElementById('encode-method').value;
+
             if(!rawCode) { alert("Không có code để mã hóa!"); return; }
 
             const btn = document.getElementById('btn-obfuscate');
             const originalText = btn.innerText;
-            btn.innerText = "⏳ Đang mã hóa (Có thể mất vài giây)..."; btn.disabled = true;
+            btn.innerText = "⏳ Đang mã hóa..."; btn.disabled = true;
             btn.style.background = "#666";
 
             await sleep(1000);
 
-            // 1. Chuyển toàn bộ code thành mảng các mã ASCII
-            let charCodes = [];
-            for (let i = 0; i < rawCode.length; i++) {
-                // XOR nhẹ để giấu ký tự gốc, cộng thêm 100 để tránh số âm
-                charCodes.push((rawCode.charCodeAt(i) ^ 42) + 100);
+            // Phần Header bắt buộc
+            const header = `--===================================--\n-- Code này đã được mã hóa code không thể xem\n-- Chống copy và không thể lộ code thật\n--===================================--\n`;
+
+            let obfuscatedLuau = "";
+
+            if (method === "type1") {
+                // KIỂU 1: Mảng số (XOR + Cộng 100 + Xáo trộn)
+                let charCodes = [];
+                for (let i = 0; i < rawCode.length; i++) {
+                    charCodes.push((rawCode.charCodeAt(i) ^ 42) + 100);
+                }
+                for (let i = charCodes.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [charCodes[i], charCodes[j]] = [charCodes[j], charCodes[i]];
+                }
+                const packedData = JSON.stringify(charCodes);
+                
+                // Mỗi lần mã hóa sẽ có một salt khác nhau để chuỗi không bao giờ trùng
+                const salt = Math.floor(Math.random() * 9999); 
+
+                obfuscatedLuau = `${header}local _p = ${packedData}\nlocal _s = ${salt}\nlocal _b = {}\nfor _i, _v in ipairs(_p) do\n    _b[_i] = string.char((_v - 100) ~ 42)\nend\nlocal _c = table.concat(_b)\nlocal _f, _e = loadstring(_c)\nif _f then _f() else warn("[Vault] Lỗi: "..tostring(_e)) end`;
+
+            } else if (method === "type2") {
+                // KIỂU 2: String.char (Giống hệt code mẫu của bạn)
+                // Chuyển toàn bộ code thành dãy số ASCII, không xáo trộn, không XOR
+                // Cách này code sinh ra sẽ dài hơn rất nhiều nhưng "nhìn" giống code xịn hơn.
+                let charArray = [];
+                for (let i = 0; i < rawCode.length; i++) {
+                    charArray.push(rawCode.charCodeAt(i));
+                }
+                
+                // Chia nhỏ mảng thành các khối 100 phần tử để tránh bị quá dài 1 dòng
+                let chunks = [];
+                for (let i = 0; i < charArray.length; i += 100) {
+                    chunks.push(charArray.slice(i, i + 100).join(","));
+                }
+
+                let encodedString = "";
+                chunks.forEach(chunk => {
+                    encodedString += `string.char(${chunk})..\n`;
+                });
+                // Xóa dấu .. cuối cùng
+                encodedString = encodedString.slice(0, -3); 
+                
+                // Tạo độ nhiễu (Salt) ngẫu nhiên để mỗi lần mã hóa khác nhau
+                const noise = Math.random().toString(36).substring(2, 10);
+
+                obfuscatedLuau = `${header}local _n = "${noise}"\nlocal _c = ${encodedString}\nlocal _f, _e = loadstring(_c)\nif _f then _f() else warn("[Vault] Lỗi: "..tostring(_e)) end`;
             }
-
-            // 2. XÁO TRỘN MẢNG (Shuffle Array) để chống dịch ngược
-            for (let i = charCodes.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [charCodes[i], charCodes[j]] = [charCodes[j], charCodes[i]];
-            }
-
-            const arrayLength = charCodes.length;
-            const secretSalt = Math.floor(Math.random() * 9999); // Tạo muối ngẫu nhiên
-            const packedData = JSON.stringify(charCodes);
-
-            // 3. Tạo Wrapper Luau (Phong cách string.char và giải mã)
-            // Đoạn code này sẽ tự động lắp ghép lại mảng, giải mã XOR và chạy.
-            const obfuscatedLuau = `-- Protected by System Vault (Advanced String Encoding)
--- WARNING: Do not modify or share this script.
-local _packed = ${packedData}
-local _salt = ${secretSalt}
-local _buffer = {}
-local _key = 42
-
--- Hàm giải mã ngược (Trừ 100 và XOR)
-local function _unpack(_val)
-    return string.char((_val - 100) ~ _key)
-end
-
--- Duyệt mảng đã xáo trộn và giải mã
-for _i, _v in ipairs(_packed) do
-    _buffer[_i] = _unpack(_v)
-end
-
--- Nối thành chuỗi hoàn chỉnh
-local _decoded = table.concat(_buffer)
-
--- Xóa dấu vết bộ nhớ
-_buffer = nil
-_packed = nil
-
--- Thực thi
-local _func, _err = loadstring(_decoded)
-_decoded = nil -- Xóa tiếp
-
-if _func then
-    _func()
-else
-    warn("[System Vault] Lỗi giải mã bảo vệ: " .. tostring(_err))
-end`;
 
             document.getElementById('admin-code').value = obfuscatedLuau;
             
