@@ -4,310 +4,360 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Bagah Vault | Multi-Layer Security</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <title>System Vault | Ultimate Security</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #050505;
-            --surface: #0f0f13;
-            --primary: #facc15; /* Vàng */
-            --success: #4ade80; /* Xanh lá */
-            --danger: #ef4444;  /* Đỏ */
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #27272a;
+            --bg: #050505; --surface: #0f0f13; --primary: #facc15;
+            --danger: #ef4444; --success: #4ade80; --text: #f8fafc;
+            --muted: #94a3b8; --border: #27272a;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         body {
-            background-color: var(--bg);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background-image: 
-                linear-gradient(rgba(15, 15, 19, 0.95), rgba(5, 5, 5, 0.95)),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px),
-                linear-gradient(var(--border) 1px, transparent 1px);
-            background-size: 100% 100%, 40px 40px, 40px 40px;
-            overflow: hidden;
+            background-color: var(--bg); color: var(--text);
+            min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
+            background-image: linear-gradient(rgba(15,15,19,0.9), rgba(5,5,5,0.9)), linear-gradient(90deg, var(--border) 1px, transparent 1px), linear-gradient(var(--border) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
         }
+
+        /* --- MÀN HÌNH LOADING BAN ĐẦU --- */
+        #initial-loading {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; transition: opacity 1s ease;
+        }
+        #initial-loading img {
+            width: 300px; max-width: 80%; border-radius: 15px;
+            box-shadow: 0 0 30px rgba(250, 204, 21, 0.2); margin-bottom: 20px;
+        }
+        .loader-text { color: var(--primary); font-family: 'Fira Code', monospace; font-size: 18px; animation: pulse 1.5s infinite alternate; }
+        
         /* --- HEADER --- */
         header {
-            width: 100%; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between;
-            border-bottom: 1px solid var(--border); background: rgba(5, 5, 5, 0.8); backdrop-filter: blur(10px);
-            z-index: 10;
+            width: 100%; padding: 15px 20px; display: flex; justify-content: space-between;
+            border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.8); backdrop-filter: blur(10px); z-index: 100;
         }
         .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
-        .logo-icon { width: 30px; height: 30px; background: var(--primary); color: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Fira Code', monospace; font-size: 18px; }
-        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(250, 204, 21, 0.1); color: var(--primary); border: 1px solid rgba(250, 204, 21, 0.3); font-family: 'Fira Code', monospace; transition: 0.3s;}
+        .logo-icon { width: 30px; height: 30px; background: var(--primary); color: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Fira Code'; font-size: 18px; }
+        .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(250, 204, 21, 0.1); color: var(--primary); border: 1px solid rgba(250, 204, 21, 0.3); font-family: 'Fira Code'; transition: 0.3s; }
+        .admin-btn { background: transparent; border: 1px solid var(--muted); color: var(--muted); padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-left: 15px; font-size: 12px; transition: 0.2s;}
+        .admin-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-        /* --- CONTAINERS --- */
-        .layer-container { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; animation: fadeIn 0.4s ease-out forwards; }
-        .layer-container.active { display: flex; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-
-        /* --- LỚP 1 & 2 (CLOUDFLARE STYLE) --- */
-        .security-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 40px 30px; max-width: 400px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-        .spinner-box { width: 50px; height: 50px; margin: 0 auto 20px auto; position: relative; }
-        .spinner-ring { width: 100%; height: 100%; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .security-box h2 { font-size: 20px; margin-bottom: 10px; font-weight: 700; }
-        .security-box p { color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+        /* --- LAYOUT CHUNG --- */
+        .layer-container { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .layer-container.active { display: flex; animation: fadeIn 0.5s ease; }
+        .box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 30px; max-width: 450px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        .box::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--primary); }
+        .box h2 { color: var(--primary); font-size: 20px; margin-bottom: 15px; }
+        .box p { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
         
-        /* --- LỚP 3 (PASSWORD VAULT) --- */
-        .vault-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 30px; max-width: 400px; width: 100%; text-align: left; }
-        .vault-box h2 { font-size: 18px; margin-bottom: 5px; color: var(--primary); }
-        .vault-box p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
-        .input-group { margin-bottom: 20px; }
-        .input-group input {
-            width: 100%; padding: 12px 15px; background: var(--bg); border: 1px solid var(--border);
-            border-radius: 8px; color: var(--text-main); font-size: 16px; font-family: 'Fira Code', monospace;
-            outline: none; transition: 0.2s; letter-spacing: 2px;
+        /* Progress Bar */
+        .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 3px; margin-bottom: 20px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary-dark), var(--primary)); transition: width 0.3s ease; }
+        
+        /* Inputs & Buttons */
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; font-family: 'Fira Code'; transition: 0.3s;}
+        input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+        button { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #fff; box-shadow: 0 0 15px rgba(250,204,21,0.4); }
+        
+        /* Error Box */
+        .error-box { display: none; margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-size: 13px; text-align: left; font-family: 'Fira Code'; }
+
+        /* Code Area */
+        #layer4 { width: 100%; max-width: 1000px; margin: 0 auto; }
+        .code-wrapper { background: #000; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 15px; }
+        pre { margin: 0; padding: 20px; overflow: auto; font-family: 'Fira Code'; font-size: 13px; line-height: 1.6; color: #e2e8f0; width: 100%; height: 50vh; }
+        
+        /* Spinner */
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(250,204,21,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
+
+        /* --- ADMIN PANEL (POPUP) --- */
+        #admin-panel {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+            background: var(--surface); border: 2px solid var(--primary); border-radius: 15px;
+            padding: 30px; z-index: 1000; width: 90%; max-width: 500px; display: none;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); opacity: 0; transition: 0.3s;
         }
-        .input-group input:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
-        .btn-submit { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; }
-        .btn-submit:hover { background: #fff; box-shadow: 0 0 15px rgba(250, 204, 21, 0.4); }
+        #admin-panel.active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .admin-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; display: none; backdrop-filter: blur(5px); }
+        .admin-overlay.active { display: block; }
+        .admin-panel h3 { color: var(--primary); margin-bottom: 20px; text-align: center; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 6px; font-family: 'Fira Code'; font-size: 12px; }
+        .form-group textarea { height: 100px; resize: vertical; }
+        .close-admin { position: absolute; top: 10px; right: 15px; color: var(--danger); background: none; border: none; font-size: 24px; cursor: pointer; width: auto; padding: 0; }
 
-        /* --- MÀN HÌNH LỖI --- */
-        .error-box { background: rgba(20, 0, 0, 0.8); border: 1px solid var(--danger); border-radius: 12px; padding: 30px; max-width: 400px; width: 100%; box-shadow: 0 0 30px rgba(239, 68, 68, 0.2); }
-        .error-box h1 { color: var(--danger); font-size: 22px; margin-bottom: 10px; text-transform: uppercase; }
-        .error-box p { color: var(--text-muted); font-size: 14px; margin-bottom: 15px; }
-        .error-code { font-family: 'Fira Code', monospace; font-size: 12px; background: #000; padding: 8px; border-radius: 6px; color: var(--danger); border: 1px dashed var(--danger); text-align: left; }
-
-        /* --- CODE SCREEN --- */
-        #layer-code { width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; display: none; flex-direction: column; flex: 1; }
-        #layer-code.active { display: flex; animation: fadeIn 0.6s ease-out forwards; }
-        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .btn-copy { background: var(--primary); color: #000; border: none; padding: 10px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 13px; transition: 0.2s;}
-        .btn-copy:hover { background: #fff; }
-        .code-wrapper { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; flex: 1; display: flex; }
-        pre { margin: 0; padding: 20px; overflow: auto; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.6; color: #e2e8f0; width: 100%; height: 60vh; user-select: text; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo-area"><div class="logo-icon">B</div>Bagah Vault</div>
+    <!-- NHẠC NỀN (Bạn có thể thay link mp3 khác) -->
+    <audio id="bg-music" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- MÀN HÌNH LOADING BAN ĐẦU -->
+    <div id="initial-loading">
+        <!-- Thay link ảnh GIF của bạn vào đây -->
+        <img src="https://media.giphy.com/media/xUOwG7Rk8S0VbXq5G8/giphy.gif" alt="Loading...">
+        <div class="loader-text">Đang kết nối hệ thống an ninh...</div>
+    </div>
+
+    <!-- HEADER -->
+    <header style="display:none;" id="main-header">
+        <div class="logo-area">
+            <div class="logo-icon">B</div>System Vault
+            <button class="admin-btn" onclick="toggleAdmin()">⚙️ Admin</button>
+        </div>
         <div class="status-badge" id="header-status">INITIALIZING...</div>
     </header>
 
-    <!-- LỚP 1: ROBOT DETECTED -->
-    <div id="layer-1" class="layer-container active">
-        <div class="security-box">
-            <div class="spinner-box"><div class="spinner-ring"></div></div>
-            <h2>Robot Detected</h2>
-            <p id="l1-msg">Đang kết nối với máy chủ bảo mật. Vui lòng đợi trong giây lát...</p>
+    <!-- LỚP 1 -->
+    <div id="layer1" class="layer-container">
+        <div class="box">
+            <div class="spinner"></div>
+            <h2>Lớp 1: Robot Detected</h2>
+            <p id="l1-desc">Đang kiểm tra trình duyệt và quét IP (chống VPN/Proxy)...</p>
+            <div class="progress-bar"><div class="progress-fill" id="l1-progress"></div></div>
+            <div id="l1-error" class="error-box"></div>
         </div>
     </div>
 
-    <!-- LỚP 2: ADMIN IP CHECK -->
-    <div id="layer-2" class="layer-container">
-        <div class="security-box">
-            <div class="spinner-box"><div class="spinner-ring" style="border-top-color: var(--success);"></div></div>
-            <h2>Verifying Identity</h2>
-            <p id="l2-msg">Đang đối chiếu địa chỉ IP thiết bị với cơ sở dữ liệu Admin...</p>
+    <!-- LỚP 2 -->
+    <div id="layer2" class="layer-container">
+        <div class="box">
+            <div class="spinner" style="border-top-color: #3b82f6;"></div>
+            <h2>Lớp 2: IP Authentication</h2>
+            <p>Đang đối chiếu IP thiết bị với cơ sở dữ liệu Admin...</p>
+            <div class="progress-bar"><div class="progress-fill" id="l2-progress" style="background:#3b82f6;"></div></div>
+            <div id="l2-error" class="error-box"></div>
         </div>
     </div>
 
-    <!-- LỚP 3: PASSWORD VAULT -->
-    <div id="layer-3" class="layer-container">
-        <div class="vault-box">
-            <h2>Security Key Required</h2>
-            <p>Nhập mật khẩu để giải mã kho lưu trữ.</p>
-            <div class="input-group">
-                <input type="password" id="vault-pass" placeholder="••••••••" autocomplete="off">
+    <!-- LỚP 3 -->
+    <div id="layer3" class="layer-container">
+        <div class="box">
+            <h2>Lớp 3: Access Key</h2>
+            <p>Nhập mật khẩu cấp cao để tiếp tục.</p>
+            <input type="password" id="pass-input" placeholder="Nhập mật khẩu...">
+            <p style="text-align:left; margin-bottom:5px; color:#fff; font-size:12px;" id="l3-captcha-question">Tính toán: 0 + 0 = ?</p>
+            <input type="text" id="l3-captcha-input" placeholder="Nhập kết quả Captcha...">
+            <button onclick="checkLayer3()">Xác Minh</button>
+            <div id="l3-error" class="error-box"></div>
+        </div>
+    </div>
+
+    <!-- LỚP 4 -->
+    <div id="layer4" class="layer-container" style="justify-content: flex-start; padding-top: 30px;">
+        <div class="box" style="max-width: 600px;">
+            <h2>Lớp 4: Final Verification</h2>
+            <p>Kiểm tra lần cuối chống Bot và Bypass IP.</p>
+            <p style="text-align:left; margin-bottom:5px; color:#fff; font-size:12px;" id="l4-captcha-question">Giải mã: 0 x 0 = ?</p>
+            <input type="text" id="l4-captcha-input" placeholder="Nhập kết quả...">
+            <button onclick="checkLayer4()">Mở Khóa Raw Code</button>
+            <div id="l4-error" class="error-box"></div>
+        </div>
+        <div id="final-code-area" style="display:none; width:100%; margin-top:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="color:var(--success);">✅ TRUY CẬP THÀNH CÔNG</h3>
+                <button onclick="copyCode()" style="width:auto; padding:8px 15px;">Copy Code</button>
             </div>
-            <button class="btn-submit" onclick="verifyPassword()">Unlock Vault</button>
+            <div class="code-wrapper"><pre id="codeBlock"></pre></div>
         </div>
     </div>
 
-    <!-- MÀN HÌNH LỖI CHUNG -->
-    <div id="layer-error" class="layer-container">
-        <div class="error-box">
-            <h1>Access Denied</h1>
-            <p id="error-msg">Hệ thống đã chặn truy cập của bạn vì lý do bảo mật.</p>
-            <div class="error-code" id="error-code">ERROR: 403_FORBIDDEN</div>
+    <!-- ADMIN PANEL & OVERLAY -->
+    <div class="admin-overlay" id="admin-overlay" onclick="toggleAdmin()"></div>
+    <div id="admin-panel">
+        <button class="close-admin" onclick="toggleAdmin()">×</button>
+        <h3>⚙️ Bảng Điều Khiển Admin</h3>
+        
+        <div class="form-group">
+            <label>Mật khẩu Lớp 3 (Hiện tại: <span id="cur-pass"></span>)</label>
+            <input type="text" id="admin-pass" placeholder="Nhập mật khẩu mới...">
         </div>
-    </div>
-
-    <!-- MÀN HÌNH CODE -->
-    <div id="layer-code">
-        <div class="toolbar">
-            <h3 style="color: var(--success); font-family: 'Fira Code';">// Access Granted - Welcome Admin</h3>
-            <button class="btn-copy" onclick="copyCode()">Copy Raw Code</button>
+        <div class="form-group">
+            <label>IP Admin (Hiện tại: <span id="cur-ip"></span>)</label>
+            <input type="text" id="admin-ip" placeholder="Nhập IP của bạn...">
         </div>
-        <div class="code-wrapper">
-            <pre id="codeBlock">Đang tải...</pre>
+        <div class="form-group">
+            <label>Code Lua (Sẽ được mã hóa tự động)</label>
+            <textarea id="admin-code" placeholder="Dán code Lua thô vào đây..."></textarea>
         </div>
+        <button onclick="saveAdmin()" style="margin-top:10px;">💾 Lưu Cấu Hình</button>
     </div>
 
     <script>
         // ==========================================
-        // CẤU HÌNH BẢO MẬT
+        // CẤU HÌNH MẶC ĐỊNH (Nếu chưa có lưu)
         // ==========================================
-        // Thay thế bằng IP thật của bạn (Lấy ở whatismyip.com)
-        const ALLOWED_IPS = ["14.249.135.65", "127.0.0.1"]; 
-        const VAULT_PASSWORD = "18062012";
+        const DEFAULT_CONFIG = {
+            password: "18062012",
+            ip: "14.249.135.65", // Sửa IP mặc định ở đây
+            code: "local SUPPORTED_GAMES = { ... } -- Code Lua mẫu"
+        };
 
-        // Code Lua của bạn (Dán vào giữa 2 dấu backtick)
-        const SECRET_LUA_CODE = `local SUPPORTED_GAMES = {
-    ["Evade"] = {
-        full = "https://api.jnkie.com/.../download",
-        farmOnly = "https://api.jnkie.com/.../download",
-        placeIds = { 10324346056, 9872472334 }
-    }
-}
-print("Vault Unlocked Successfully!")`;
-
-        // ==========================================
-        // CÁC HÀM XỬ LÝ GIAO DIỆN
-        // ==========================================
-        function switchLayer(layerId) {
-            document.querySelectorAll('.layer-container, #layer-code').forEach(el => el.classList.remove('active'));
-            if(layerId === 'code') {
-                document.getElementById('layer-code').classList.add('active');
-            } else {
-                document.getElementById(layerId).classList.add('active');
-            }
-        }
-
-        function showError(title, msg, code) {
-            document.getElementById('header-status').textContent = "BLOCKED";
-            document.getElementById('header-status').style.color = "var(--danger)";
-            document.getElementById('error-msg').textContent = msg;
-            document.getElementById('error-code').innerHTML = `ERROR: ${title}<br>${code}`;
-            switchLayer('layer-error');
-        }
-
-        function setStatusColor(color) {
-            const badge = document.getElementById('header-status');
-            badge.style.color = color;
-            badge.style.borderColor = color === "var(--success)" ? "rgba(74, 222, 128, 0.3)" : "rgba(250, 204, 21, 0.3)";
-            badge.style.background = color === "var(--success)" ? "rgba(74, 222, 128, 0.1)" : "rgba(250, 204, 21, 0.1)";
-        }
+        // Khởi tạo cấu hình từ LocalStorage hoặc mặc định
+        let config = JSON.parse(localStorage.getItem('bagahConfig')) || DEFAULT_CONFIG;
+        
+        let realIP = "";
+        let captchaL3 = 0, captchaL4 = 0;
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
         // ==========================================
-        // KIỂM TRA CHỐNG BOT (Hàm dùng chung)
+        // 1. KHỞI TẠO BAN ĐẦU & NHẠC NỀN
         // ==========================================
-        function isBot() {
-            return navigator.webdriver || /HeadlessChrome|PhantomJS|Python|curl|wget/i.test(navigator.userAgent);
-        }
+        window.addEventListener('DOMContentLoaded', () => {
+            // Cập nhật thông tin hiển thị trong Admin Panel
+            updateAdminUI();
 
-        // ==========================================
-        // LUỒNG CHẠY CHÍNH (ASYNC/AWAIT)
-        // ==========================================
-        async function initSecurity() {
-            // --- BẮT ĐẦU LỚP 1 ---
-            document.getElementById('header-status').textContent = "LAYER 1";
-            
-            // 1. Kiểm tra Bot
-            if (isBot()) {
-                showError("403_BOT_DETECTED", "Phát hiện truy cập tự động bằng Bot.", "AUTOMATION_DETECTED_AT_LAYER_1");
-                return;
-            }
-            
-            // 2. Lấy IP người dùng
-            let userIP = "Unknown";
-            try {
-                document.getElementById('l1-msg').innerHTML = "Đang lấy địa chỉ IP công khai...";
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                userIP = data.ip;
-                document.getElementById('l1-msg').innerHTML = `IP của bạn: <b style="color:var(--primary);">${userIP}</b><br>Đang chuyển sang lớp xác minh...`;
-            } catch (e) {
-                showError("500_NETWORK_ERR", "Không thể lấy địa chỉ IP. Vui lòng kiểm tra kết nối mạng (hoặc tắt VPN/Adblock).", "IP_FETCH_FAILED");
-                return;
-            }
-
-            // Chờ 1.5s cho ngầu
-            await new Promise(r => setTimeout(r, 1500));
-
-            // --- BẮT ĐẦU LỚP 2 ---
-            document.getElementById('header-status').textContent = "LAYER 2";
-            switchLayer('layer-2');
-            
-            // 1. Kiểm tra Bot lần 2
-            if (isBot()) {
-                showError("403_BOT_DETECTED", "Phát hiện truy cập tự động bằng Bot.", "AUTOMATION_DETECTED_AT_LAYER_2");
-                return;
-            }
-
-            // 2. So khớp IP
-            await new Promise(r => setTimeout(r, 1200)); // Delay fake check
-            if (!ALLOWED_IPS.includes(userIP)) {
-                showError("403_IP_MISMATCH", `Địa chỉ IP (${userIP}) không nằm trong danh sách cho phép của Admin.`, "UNAUTHORIZED_IP_ADDRESS");
-                return;
-            }
-
-            document.getElementById('l2-msg').innerHTML = `<b style="color:var(--success);">Xác minh IP thành công!</b><br>Vui lòng nhập mật khẩu.`;
-            await new Promise(r => setTimeout(r, 1000));
-
-            // --- BẮT ĐẦU LỚP 3 ---
-            document.getElementById('header-status').textContent = "LAYER 3";
-            setStatusColor("var(--primary)");
-            switchLayer('layer-3');
-        }
-
-        // ==========================================
-        // XÁC MINH MẬT KHẨU (LỚP 3)
-        // ==========================================
-        function verifyPassword() {
-            // Kiểm tra Bot lần 3
-            if (isBot()) {
-                showError("403_BOT_DETECTED", "Phát hiện truy cập tự động bằng Bot.", "AUTOMATION_DETECTED_AT_LAYER_3");
-                return;
-            }
-
-            const input = document.getElementById('vault-pass').value;
-            const btn = document.querySelector('.btn-submit');
-
-            if (input === VAULT_PASSWORD) {
-                // Đúng mật khẩu
-                btn.textContent = "Decrypting...";
-                btn.style.background = "var(--success)";
-                
+            // Chờ 3.5 giây ở màn hình Loading
+            setTimeout(() => {
+                const loader = document.getElementById('initial-loading');
+                loader.style.opacity = '0';
                 setTimeout(() => {
-                    document.getElementById('header-status').textContent = "SECURE";
-                    setStatusColor("var(--success)");
-                    document.getElementById('codeBlock').textContent = SECRET_LUA_CODE;
-                    switchLayer('code');
+                    loader.style.display = 'none';
+                    document.getElementById('main-header').style.display = 'flex';
+                    
+                    // Bật nhạc nền (Trình duyệt bắt buộc phải có tương tác mới phát nhạc)
+                    document.body.addEventListener('click', () => {
+                        const music = document.getElementById('bg-music');
+                        if(music.paused) { music.volume = 0.3; music.play(); }
+                    }, { once: true });
+
+                    runLayer1();
                 }, 1000);
-            } else {
-                // Sai mật khẩu
-                btn.textContent = "Access Denied";
-                btn.style.background = "var(--danger)";
-                btn.style.color = "#fff";
-                document.getElementById('vault-pass').style.borderColor = "var(--danger)";
-                
-                setTimeout(() => {
-                    btn.textContent = "Unlock Vault";
-                    btn.style.background = "var(--primary)";
-                    btn.style.color = "#000";
-                    document.getElementById('vault-pass').style.borderColor = "var(--border)";
-                    document.getElementById('vault-pass').value = "";
-                }, 1500);
+            }, 3500);
+        });
+
+        function showLayer(id) {
+            document.querySelectorAll('.layer-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+        
+        function showError(layer, msg) {
+            const err = document.getElementById(layer + '-error');
+            err.style.display = 'block';
+            err.innerHTML = `❌ LỖI: ${msg}`;
+            const st = document.getElementById('header-status');
+            st.textContent = "BLOCKED"; st.style.color = "var(--danger)";
+        }
+
+        // ==========================================
+        // LỚP 1 & 2: GIỐNG BẢN CŨ
+        // ==========================================
+        async function runLayer1() {
+            showLayer('layer1');
+            const prog = document.getElementById('l1-progress');
+            
+            if (navigator.webdriver) { showError('l1', 'Phát hiện Bot tự động!'); return; }
+            prog.style.width = '30%'; await sleep(800);
+
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                realIP = (await res.json()).ip;
+                prog.style.width = '70%'; await sleep(800);
+            } catch (e) { showError('l1', 'Lỗi mạng.'); return; }
+
+            prog.style.width = '100%'; await sleep(800);
+            runLayer2();
+        }
+
+        async function runLayer2() {
+            showLayer('layer2');
+            const prog = document.getElementById('l2-progress');
+            prog.style.width = '50%'; await sleep(1000);
+            
+            if (!config.ip || realIP !== config.ip) {
+                showError('l2', `IP của bạn (${realIP}) không khớp với Admin!`);
+                return;
             }
+            prog.style.width = '100%'; await sleep(800);
+            
+            captchaL3 = Math.floor(Math.random() * 10) + 5;
+            document.getElementById('l3-captcha-question').innerText = `Captcha: ${captchaL3 - 5} + 5 = ?`;
+            showLayer('layer3');
         }
 
         // ==========================================
-        // HÀM COPY CODE
+        // LỚP 3 & 4: NHẬP MẬT KHẨU VÀ CODE
         // ==========================================
+        function checkLayer3() {
+            const pass = document.getElementById('pass-input').value;
+            const cap = document.getElementById('l3-captcha-input').value;
+
+            if (pass !== config.password) { showError('l3', 'Sai mật khẩu!'); return; }
+            if (parseInt(cap) !== captchaL3) { showError('l3', 'Sai Captcha!'); return; }
+
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            captchaL4 = num1 * num2;
+            document.getElementById('l4-captcha-question').innerText = `Captcha: ${num1} x ${num2} = ?`;
+            showLayer('layer4');
+        }
+
+        async function checkLayer4() {
+            const cap = document.getElementById('l4-captcha-input').value;
+            if (parseInt(cap) !== captchaL4) { showError('l4', 'Sai Captcha!'); return; }
+
+            const btn = document.querySelector('#layer4 button');
+            btn.innerText = "Đang xác minh..."; btn.disabled = true;
+            await sleep(1000);
+
+            // Hiển thị code Lua lấy từ Config
+            document.getElementById('codeBlock').textContent = config.code;
+            document.getElementById('final-code-area').style.display = 'block';
+            document.getElementById('header-status').textContent = "ACCESS GRANTED";
+            document.getElementById('header-status').style.color = "var(--success)";
+            
+            btn.style.display = 'none';
+            document.getElementById('l4-captcha-input').style.display = 'none';
+            document.getElementById('l4-captcha-question').style.display = 'none';
+        }
+
         function copyCode() {
-            const codeText = document.getElementById('codeBlock').textContent;
-            navigator.clipboard.writeText(codeText).then(() => {
-                const btn = document.querySelector('.btn-copy');
-                btn.innerHTML = '✅ Đã Copy!';
-                btn.style.background = '#4ade80';
-                setTimeout(() => {
-                    btn.innerHTML = 'Copy Raw Code';
-                    btn.style.background = 'var(--primary)';
-                }, 2000);
-            }).catch(err => alert("Lỗi khi copy!"));
+            navigator.clipboard.writeText(document.getElementById('codeBlock').textContent).then(() => alert("Đã copy code!"));
         }
 
-        // Kích hoạt khi tải trang
-        document.addEventListener('DOMContentLoaded', initSecurity);
+        // ==========================================
+        // CHỨC NĂNG ADMIN PANEL
+        // ==========================================
+        function toggleAdmin() {
+            const p = document.getElementById('admin-panel');
+            const o = document.getElementById('admin-overlay');
+            if (p.classList.contains('active')) { p.classList.remove('active'); o.classList.remove('active'); }
+            else { p.classList.add('active'); o.classList.add('active'); }
+        }
+
+        function updateAdminUI() {
+            document.getElementById('cur-pass').innerText = config.password;
+            document.getElementById('cur-ip').innerText = config.ip;
+            document.getElementById('admin-pass').value = config.password;
+            document.getElementById('admin-ip').value = config.ip;
+            document.getElementById('admin-code').value = config.code;
+        }
+
+        function saveAdmin() {
+            const newPass = document.getElementById('admin-pass').value;
+            const newIP = document.getElementById('admin-ip').value;
+            const newCode = document.getElementById('admin-code').value;
+
+            if(!newPass || !newIP || !newCode) {
+                alert("Vui lòng nhập đủ thông tin!"); return;
+            }
+
+            // Lưu vào LocalStorage
+            config = { password: newPass, ip: newIP, code: newCode };
+            localStorage.setItem('bagahConfig', JSON.stringify(config));
+            
+            alert("✅ Đã lưu cấu hình thành công! Trang web sẽ tải lại.");
+            location.reload(); // Tải lại để áp dụng cài đặt mới
+        }
     </script>
 </body>
 </html>
