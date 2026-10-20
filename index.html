@@ -10,7 +10,7 @@
         :root {
             --bg: #050505; --surface: #0f0f13; --primary: #facc15;
             --danger: #ef4444; --success: #4ade80; --text: #f8fafc;
-            --muted: #94a3b8; --border: #27272a; --cloudflare: #f6821f;
+            --muted: #94a3b8; --border: #27272a; --antiraw: #f97316;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
         body {
@@ -20,86 +20,78 @@
             background-size: 100% 100%, 30px 30px, 30px 30px;
         }
 
-        /* --- MÀN HÌNH GIF CHÀO MỪNG --- */
-        #welcome-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #050505; z-index: 9999; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center; padding: 20px;
-            transition: opacity 0.5s ease;
-        }
-        #welcome-screen img {
-            width: 200px; border-radius: 15px; margin-bottom: 20px;
-            box-shadow: 0 0 30px rgba(250, 204, 21, 0.4);
-            border: 2px solid var(--primary);
-        }
+        /* --- MÀN HÌNH GIF --- */
+        #welcome-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; transition: opacity 0.5s ease; }
+        #welcome-screen img { width: 200px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(250, 204, 21, 0.4); border: 2px solid var(--primary); }
         #welcome-screen h2 { color: var(--primary); font-family: 'Fira Code', monospace; font-size: 20px; margin-bottom: 10px; }
         #welcome-screen p { color: var(--muted); font-size: 14px; margin-bottom: 25px; }
+        .btn-start { width: auto; padding: 12px 30px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 0 15px rgba(250,204,21,0.5); transition: 0.2s; }
+        .btn-start:hover { background: #fff; }
 
-        /* --- HEADER & ADMIN BUTTON --- */
-        header {
-            width: 100%; padding: 15px 20px; display: flex; justify-content: space-between;
-            border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.8); backdrop-filter: blur(10px); z-index: 100;
-        }
+        /* --- HEADER --- */
+        header { width: 100%; padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); background: rgba(5,5,5,0.8); backdrop-filter: blur(10px); z-index: 100; }
         .logo-area { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
         .logo-icon { width: 30px; height: 30px; background: var(--primary); color: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Fira Code'; font-size: 18px; }
         .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: rgba(250, 204, 21, 0.1); color: var(--primary); border: 1px solid rgba(250, 204, 21, 0.3); font-family: 'Fira Code'; transition: 0.3s; }
-        
-        /* Nút Admin bị ẩn mặc định */
         .admin-btn { display: none; background: transparent; border: 1px solid var(--muted); color: var(--muted); padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-left: 15px; font-size: 12px; transition: 0.2s;}
         .admin-btn:hover { border-color: var(--primary); color: var(--primary); }
 
         /* --- LAYOUT CHUNG --- */
-        .layer-container { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+        .layer-container { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; width: 100%; text-align: center; }
         .layer-container.active { display: flex; animation: fadeIn 0.5s ease; }
-        .box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 30px; max-width: 450px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
+        .box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 25px 20px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; margin: 0 auto; }
         .box h2 { color: var(--primary); font-size: 20px; margin-bottom: 15px; }
         .box p { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
         
-        /* Progress Bar kiểu Loading thanh ngang */
         .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 3px; margin-bottom: 20px; overflow: hidden; }
-        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary-dark), var(--primary)); transition: width 0.4s ease; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ca8a04, var(--primary)); transition: width 0.4s ease; }
         
-        /* Inputs & Buttons */
-        input[type="text"], input[type="password"] { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; font-family: 'Fira Code'; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 8px; margin-bottom: 15px; font-family: 'Fira Code'; font-size: 14px; }
         input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
-        button { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #fff; }
+        
+        .btn-main { width: 100%; padding: 12px; background: var(--primary); color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; margin-top: 10px; }
+        .btn-main:hover { background: #fff; }
+        .btn-main:disabled { background: #333; color: #666; cursor: not-allowed; }
         
         .error-box { display: none; margin-top: 15px; padding: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-size: 13px; font-family: 'Fira Code'; text-align: left; }
 
-        /* Spinner & Animation Chuyển Lớp */
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(250,204,21,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto; }
-        .spinner-cf { border-top-color: var(--cloudflare); }
         
-        /* --- GIAO DIỆN CAPTCHA TRƯỢT (CLOUDFLARE STYLE) --- */
-        .captcha-box {
-            background: #fff; color: #000; border-radius: 4px; padding: 10px;
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 20px; border: 1px solid #ccc; user-select: none;
-        }
-        .captcha-checkbox { width: 24px; height: 24px; border: 2px solid #999; border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #f9f9f9; }
-        .captcha-checkbox.loading { border: 2px solid #f6821f; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-        .captcha-checkbox.success { background: #4ade80; border-color: #4ade80; color: #fff; font-weight: bold; }
-        .captcha-text { font-size: 14px; font-weight: 500; margin-left: 10px; flex: 1; text-align: left; }
-        .captcha-logo { font-size: 10px; color: #555; text-align: right; line-height: 1.2; }
-        .captcha-logo strong { color: #f6821f; font-size: 12px; }
+        /* --- GIAO DIỆN ANTI-RAW --- */
+        .antiraw-box { background: #fff; color: #000; border-radius: 6px; padding: 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border: 1px solid #ccc; user-select: none; }
+        .antiraw-checkbox { width: 26px; height: 26px; border: 2px solid #999; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #f9f9f9; transition: 0.2s;}
+        .antiraw-checkbox.loading { border: 3px solid var(--antiraw); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        .antiraw-checkbox.success { background: var(--success); border-color: var(--success); color: #fff; font-weight: bold; font-size: 18px; }
+        .antiraw-text { font-size: 14px; font-weight: 500; margin-left: 10px; flex: 1; text-align: left; color: #000;}
+        .antiraw-logo { font-size: 10px; color: #555; text-align: right; line-height: 1.2; }
+        .antiraw-logo strong { color: var(--antiraw); font-size: 12px; }
 
-        /* --- ADMIN PANEL & OVERLAY --- */
-        #admin-panel {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-            background: var(--surface); border: 2px solid var(--primary); border-radius: 15px;
-            padding: 30px; z-index: 1000; width: 90%; max-width: 500px; display: none;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8); opacity: 0; transition: 0.3s;
-        }
+        /* --- CAPTCHA SYSTEM --- */
+        .captcha-system-box { background: #fff; color: #000; border-radius: 6px; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; text-align: left; }
+        .captcha-system-header { font-weight: bold; font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .captcha-system-header span { color: var(--primary); background: #000; padding: 2px 6px; border-radius: 4px; font-size: 12px;}
+        .captcha-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+        .captcha-option-btn { background: #f0f0f0; border: 1px solid #ddd; padding: 8px 12px; border-radius: 4px; text-align: left; cursor: pointer; font-size: 13px; color: #000; transition: 0.2s; }
+        .captcha-option-btn:hover { background: #e0e0e0; }
+        .captcha-option-btn.correct { background: #d1fae5; border-color: #34d399; font-weight: bold; }
+        .captcha-option-btn.wrong { background: #fee2e2; border-color: #f87171; }
+
+        /* --- ADMIN PANEL --- */
+        #admin-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: var(--surface); border: 2px solid var(--primary); border-radius: 15px; padding: 25px; z-index: 1000; width: 90%; max-width: 500px; display: none; box-shadow: 0 0 50px rgba(0,0,0,0.8); opacity: 0; transition: 0.3s; max-height: 90vh; overflow-y: auto; }
         #admin-panel.active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
         .admin-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; display: none; backdrop-filter: blur(5px); }
         .admin-overlay.active { display: block; }
-        .admin-panel h3 { color: var(--primary); margin-bottom: 20px; text-align: center; }
         .form-group { margin-bottom: 15px; text-align: left; }
         .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
         .form-group input, .form-group textarea { width: 100%; padding: 10px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 6px; font-family: 'Fira Code'; font-size: 12px; }
-        .form-group textarea { height: 120px; resize: vertical; }
+        .form-group textarea { height: 150px; resize: vertical; }
         .close-admin { position: absolute; top: 10px; right: 15px; color: var(--danger); background: none; border: none; font-size: 24px; cursor: pointer; width: auto; padding: 0; }
+        
+        /* Nút Obfuscation và Download */
+        .btn-obfuscate { background: #3b82f6; color: #fff; }
+        .btn-obfuscate:hover { background: #2563eb; }
+        .btn-download { background: #10b981; color: #fff; }
+        .btn-download:hover { background: #059669; }
 
         /* Khu vực Code */
         #raw-area { display: none; width: 100%; max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -113,18 +105,13 @@
 </head>
 <body>
 
-    <!-- MÀN HÌNH GIF CHÀO MỪNG -->
     <div id="welcome-screen">
-        <!-- Đã thay link GIF mèo cầm dao của bạn vào đây -->
         <img src="https://media.tenor.com/hLwF5igKK80AAAAM/knife-cat-cat-knife.gif" alt="System Loading">
         <h2>SYSTEM VAULT SECURITY</h2>
         <p>Hệ thống yêu cầu xác minh 5 lớp trước khi truy cập dữ liệu lõi.</p>
-        <button onclick="startSystem()" style="width: auto; padding: 12px 30px; box-shadow: 0 0 15px rgba(250,204,21,0.5);">
-            BẮT ĐẦU XÁC MINH
-        </button>
+        <button onclick="startSystem()" class="btn-start">BẮT ĐẦU XÁC MINH</button>
     </div>
 
-    <!-- HEADER -->
     <header>
         <div class="logo-area">
             <div class="logo-icon">B</div>System Vault
@@ -133,7 +120,6 @@
         <div class="status-badge" id="header-status">VERIFYING...</div>
     </header>
 
-    <!-- LỚP 1 -->
     <div id="layer1" class="layer-container">
         <div class="box">
             <div class="spinner"></div>
@@ -144,77 +130,74 @@
         </div>
     </div>
 
-    <!-- LỚP 2 -->
     <div id="layer2" class="layer-container">
         <div class="box">
-            <div class="spinner spinner-cf"></div>
+            <div class="spinner" style="border-top-color: var(--antiraw);"></div>
             <h2>Lớp 2: IP Check</h2>
             <p id="l2-desc">Đang lấy IP thật và kiểm tra Bypass...</p>
-            <div class="progress-bar"><div class="progress-fill" id="l2-progress" style="background:var(--cloudflare);"></div></div>
+            <div class="progress-bar"><div class="progress-fill" id="l2-progress" style="background:var(--antiraw);"></div></div>
             <div id="l2-error" class="error-box"></div>
         </div>
     </div>
 
-    <!-- LỚP 3 -->
     <div id="layer3" class="layer-container">
         <div class="box">
             <h2>Lớp 3: Password</h2>
             <p>Vui lòng nhập mật khẩu cấp cao.</p>
             <input type="password" id="pass-input" placeholder="Nhập mật khẩu...">
             
-            <div class="captcha-box" id="captcha-l3">
-                <div class="captcha-checkbox" id="cb-l3" onclick="verifyCaptcha(3)"></div>
-                <div class="captcha-text">Xác minh bạn là người thật</div>
-                <div class="captcha-logo"><strong>CLOUDFLARE</strong><br>Privacy • Terms</div>
+            <div class="antiraw-box">
+                <div class="antiraw-checkbox" id="cb-l3" onclick="verifyCaptcha(3)"></div>
+                <div class="antiraw-text">Xác minh bạn là người thật</div>
+                <div class="antiraw-logo"><strong>ANTI-RAW</strong><br>SYSTEM</div>
             </div>
 
-            <button onclick="checkLayer3()" id="btn-l3" disabled>Tiếp tục</button>
+            <button onclick="checkLayer3()" id="btn-l3" class="btn-main" disabled>Tiếp tục</button>
             <div id="l3-error" class="error-box"></div>
         </div>
     </div>
 
-    <!-- LỚP 4 -->
     <div id="layer4" class="layer-container">
         <div class="box">
             <h2>Lớp 4: Final Verification</h2>
             <p>Kiểm tra an ninh lần cuối trước khi vào vùng lõi.</p>
             
-            <div class="captcha-box" id="captcha-l4">
-                <div class="captcha-checkbox" id="cb-l4" onclick="verifyCaptcha(4)"></div>
-                <div class="captcha-text">Xác minh bạn là người thật</div>
-                <div class="captcha-logo"><strong>CLOUDFLARE</strong><br>Privacy • Terms</div>
+            <div class="antiraw-box">
+                <div class="antiraw-checkbox" id="cb-l4" onclick="verifyCaptcha(4)"></div>
+                <div class="antiraw-text">Xác minh bạn là người thật</div>
+                <div class="antiraw-logo"><strong>ANTI-RAW</strong><br>SYSTEM</div>
             </div>
 
-            <button onclick="goToLayer5()" id="btn-l4" disabled>Tiếp tục</button>
+            <button onclick="goToLayer5()" id="btn-l4" class="btn-main" disabled>Tiếp tục</button>
             <div id="l4-error" class="error-box"></div>
         </div>
     </div>
 
-    <!-- LỚP 5 -->
-    <div id="layer5" class="layer-container" style="justify-content: center;">
+    <div id="layer5" class="layer-container">
         <div class="box">
-            <div class="spinner" style="border-top-color: #4ade80;"></div>
+            <div class="spinner" id="l5-spinner" style="border-top-color: #4ade80;"></div>
             <h2>Lớp 5: User access verification</h2>
             <p id="l5-desc">Đang đối chiếu IP với GitHub Admin...</p>
             <div class="progress-bar"><div class="progress-fill" id="l5-progress" style="background:#4ade80;"></div></div>
             
-            <div id="l5-captcha-area" style="display:none;">
-                <div class="captcha-box" id="captcha-l5" style="margin-top:20px;">
-                    <div class="captcha-checkbox" id="cb-l5" onclick="verifyCaptcha(5)"></div>
-                    <div class="captcha-text">Xác minh quyền Admin</div>
-                    <div class="captcha-logo"><strong>CLOUDFLARE</strong><br>Privacy • Terms</div>
+            <div id="l5-final-area" style="display:none;">
+                <div class="captcha-system-box">
+                    <div class="captcha-system-header">
+                        Captcha System <span>Security Check</span>
+                    </div>
+                    <p style="color: #666; font-size: 12px; margin-bottom: 10px;" id="quiz-question">Đang tải câu hỏi...</p>
+                    <div class="captcha-options" id="quiz-options"></div>
                 </div>
-                <button onclick="unlockRaw()" id="btn-l5" disabled>Access Raw Code</button>
+                <button onclick="unlockRaw()" id="btn-l5" class="btn-main" disabled>🔒 Access Raw Code</button>
             </div>
             <div id="l5-error" class="error-box"></div>
         </div>
     </div>
 
-    <!-- KHU VỰC RAW CODE -->
     <div id="raw-area">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <div class="success-text">✅ TRUY CẬP THÀNH CÔNG</div>
-            <button onclick="copyCode()" style="width:auto; padding:8px 15px;">Copy Code</button>
+            <button onclick="copyCode()" class="btn-main" style="width:auto; padding:8px 15px; margin-top:0;">Copy Code</button>
         </div>
         <div class="code-wrapper"><pre id="codeBlock"></pre></div>
     </div>
@@ -223,7 +206,8 @@
     <div class="admin-overlay" id="admin-overlay" onclick="toggleAdmin()"></div>
     <div id="admin-panel">
         <button class="close-admin" onclick="toggleAdmin()">×</button>
-        <h3>⚙️ Bảng Điều Khiển Admin</h3>
+        <h3 style="color:var(--primary); margin-bottom:20px; text-align:center;">⚙️ Bảng Điều Khiển Admin</h3>
+        
         <div class="form-group">
             <label>Mật khẩu Lớp 3 (Hiện tại: <span id="cur-pass"></span>)</label>
             <input type="text" id="admin-pass" placeholder="Nhập mật khẩu mới...">
@@ -233,36 +217,56 @@
             <input type="text" id="admin-ip" placeholder="Nhập IP của bạn...">
         </div>
         <div class="form-group">
-            <label>Code Lua</label>
+            <label>Code Lua (Dán code gốc vào đây trước khi mã hóa)</label>
             <textarea id="admin-code" placeholder="Dán code Lua thô vào đây..."></textarea>
         </div>
-        <button onclick="saveAdmin()" style="margin-top:10px;">💾 Lưu Cấu Hình</button>
+        
+        <!-- NÚT OBFUSCATION VÀ DOWNLOAD -->
+        <button onclick="obfuscateAdminCode()" id="btn-obfuscate" class="btn-main btn-obfuscate">🔐 Obfuscation Code</button>
+        <button onclick="downloadCode()" class="btn-main btn-download">📥 Download Code (.txt)</button>
+        <button onclick="saveAdmin()" class="btn-main" style="margin-top:20px; background:var(--primary); color:#000;">💾 Lưu Cấu Hình</button>
     </div>
 
     <script>
+        // CHỐNG DEVTOOLS
+        setInterval(function() { (function() { return false; }["constructor"]("debugger")["call"]()); }, 50);
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
         const DEFAULT_CONFIG = {
             password: "18062012",
             ip: "14.249.135.65", 
             code: "local SUPPORTED_GAMES = { ... } -- Code Lua mẫu"
         };
+        const TROLL_URL = "https://youtube.com/shorts/V06ACHMQpzg?si=8fxscK0blVvck55n";
+        const XOR_KEY = 69;
 
         let config = JSON.parse(localStorage.getItem('bagahConfig')) || DEFAULT_CONFIG;
         let realIP = "";
         let captchaSolved = { 3: false, 4: false, 5: false };
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        window.addEventListener('DOMContentLoaded', () => {
-            updateAdminUI();
-        });
+        function encryptDecrypt(text) {
+            let result = "";
+            for (let i = 0; i < text.length; i++) {
+                result += String.fromCharCode(text.charCodeAt(i) ^ XOR_KEY);
+            }
+            return btoa(unescape(encodeURIComponent(result)));
+        }
+        function decryptPayload(encoded) {
+            try {
+                let decoded = decodeURIComponent(escape(atob(encoded)));
+                let result = "";
+                for (let i = 0; i < decoded.length; i++) {
+                    result += String.fromCharCode(decoded.charCodeAt(i) ^ XOR_KEY);
+                }
+                return result;
+            } catch(e) { return null; }
+        }
 
-        // Bắt đầu hệ thống (Ẩn màn hình GIF)
+        window.addEventListener('DOMContentLoaded', () => { updateAdminUI(); });
         function startSystem() {
-            const welcome = document.getElementById('welcome-screen');
-            welcome.style.opacity = '0';
-            setTimeout(() => {
-                welcome.style.display = 'none';
-                runLayer1(); 
-            }, 500);
+            document.getElementById('welcome-screen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('welcome-screen').style.display = 'none'; runLayer1(); }, 500);
         }
 
         async function transitionToLayer(nextLayerId) {
@@ -281,135 +285,134 @@
             document.getElementById('header-status').style.color = "var(--danger)";
         }
 
-        // LỚP 1
+        function redirectTroll(layer, msg) {
+            showError(layer, msg + " Đang chuyển hướng...");
+            setTimeout(() => { window.location.href = TROLL_URL; }, 2000);
+        }
+
+        // CÁC LỚP
         async function runLayer1() {
-            const prog = document.getElementById('l1-progress');
-            const desc = document.getElementById('l1-desc');
             await sleep(1000);
-            
-            if (navigator.webdriver) { showError('l1', 'Phát hiện Bot tự động!'); return; }
-            prog.style.width = '50%'; desc.innerText = "Trình duyệt hợp lệ. Đang chuyển...";
-            
-            await sleep(1500);
-            prog.style.width = '100%';
-            await sleep(500);
+            if (navigator.webdriver) { redirectTroll('l1', 'Phát hiện Bot!'); return; }
+            document.getElementById('l1-progress').style.width = '100%';
+            await sleep(1000);
             transitionToLayer('layer2');
             runLayer2();
         }
 
-        // LỚP 2
         async function runLayer2() {
-            const prog = document.getElementById('l2-progress');
-            const desc = document.getElementById('l2-desc');
             await sleep(1000);
             try {
-                desc.innerText = "Đang lấy IP công cộng...";
                 const res = await fetch('https://api.ipify.org?format=json');
                 realIP = (await res.json()).ip;
-                prog.style.width = '60%';
-                
-                await sleep(1500); 
-                desc.innerText = "Kiểm tra Bypass IP...";
-                
-                const res2 = await fetch('https://api.ipify.org?format=json');
-                const ip2 = (await res2.json()).ip;
-                if(ip2 !== realIP) { showError('l2', 'Phát hiện thay đổi IP (Bypass/VPN)!'); return; }
-
-                prog.style.width = '100%';
-                await sleep(800);
+                document.getElementById('l2-progress').style.width = '100%';
+                await sleep(1000);
                 transitionToLayer('layer3');
-            } catch(e) {
-                showError('l2', 'Lỗi kết nối mạng!');
-            }
+            } catch(e) { showError('l2', 'Lỗi mạng!'); }
         }
 
-        // HÀM CAPTCHA
         function verifyCaptcha(layerNum) {
             if(captchaSolved[layerNum]) return;
             const cb = document.getElementById('cb-l' + layerNum);
             const btn = document.getElementById('btn-l' + layerNum);
-            
-            cb.classList.add('loading');
-            cb.onclick = null;
-
+            cb.classList.add('loading'); cb.onclick = null;
             setTimeout(() => {
-                cb.classList.remove('loading');
-                cb.classList.add('success');
-                cb.innerHTML = '✓';
-                btn.disabled = false;
+                cb.classList.remove('loading'); cb.classList.add('success');
+                cb.innerHTML = '✓'; btn.disabled = false;
                 btn.style.background = 'var(--success)';
                 captchaSolved[layerNum] = true;
-            }, 2000);
+            }, 1500);
         }
 
-        // LỚP 3
         async function checkLayer3() {
             if(!captchaSolved[3]) { showError('l3', 'Vui lòng giải Captcha!'); return; }
-            const pass = document.getElementById('pass-input').value;
-
-            if (pass !== config.password) { 
+            if (document.getElementById('pass-input').value !== config.password) { 
                 showError('l3', 'Mật khẩu không chính xác!');
                 captchaSolved[3] = false;
-                const cb = document.getElementById('cb-l3'); cb.classList.remove('success'); cb.innerHTML = ''; cb.onclick = () => verifyCaptcha(3);
+                const cb = document.getElementById('cb-l3'); 
+                cb.classList.remove('success'); cb.innerHTML = ''; cb.onclick = () => verifyCaptcha(3);
                 document.getElementById('btn-l3').disabled = true;
                 return; 
             }
             transitionToLayer('layer4');
         }
 
-        // LỚP 4
         async function goToLayer5() {
             if(!captchaSolved[4]) { showError('l4', 'Vui lòng giải Captcha!'); return; }
             transitionToLayer('layer5');
             runLayer5();
         }
 
-        // LỚP 5
         async function runLayer5() {
             const prog = document.getElementById('l5-progress');
             const desc = document.getElementById('l5-desc');
-            const captchaArea = document.getElementById('l5-captcha-area');
-
             await sleep(1500);
             desc.innerText = "Đang đối chiếu IP với GitHub Admin...";
             prog.style.width = '40%';
-
             await sleep(1500);
-            if (realIP !== config.ip) {
-                showError('l5', `IP (${realIP}) không khớp với IP Admin lưu trên Github!`);
-                return;
-            }
-
+            if (realIP !== config.ip) { redirectTroll('l5', `IP của bạn không khớp!`); return; }
             desc.innerText = "Kiểm tra Bypass IP lần cuối...";
             prog.style.width = '70%';
             await sleep(1500);
-            
             try {
                 const res = await fetch('https://api.ipify.org?format=json');
-                const finalIP = (await res.json()).ip;
-                if (finalIP !== realIP) { showError('l5', 'IP thay đổi giữa chừng (Bypass Detected)!'); return; }
-            } catch(e) { showError('l5', 'Lỗi xác minh IP cuối.'); return; }
+                if ((await res.json()).ip !== realIP) { redirectTroll('l5', 'IP thay đổi (Bypass)!'); return; }
+            } catch(e) { showError('l5', 'Lỗi xác minh IP.'); return; }
 
             prog.style.width = '100%';
-            desc.innerText = "Xác minh thành công. Vui lòng giải Captcha cuối.";
-            captchaArea.style.display = 'block';
+            desc.innerText = "IP Hợp Lệ. Vui lòng giải câu đố.";
+            document.getElementById('l5-spinner').style.display = 'none';
+            document.getElementById('l5-final-area').style.display = 'block';
+            generateQuizCaptcha();
+        }
+
+        function generateQuizCaptcha() {
+            const questions = [
+                { q: "Hệ thống Anti-Raw có bảo vệ mã nguồn không?", a: ["Có", "Không"], correct: 0 },
+                { q: "Mã nguồn HTML có thể chạy trên Github Pages?", a: ["Đúng", "Sai"], correct: 0 },
+                { q: "1 + 1 = ?", a: ["2", "3", "4"], correct: 0 }
+            ];
+            const randomQ = questions[Math.floor(Math.random() * questions.length)];
+            document.getElementById('quiz-question').innerText = randomQ.q;
+            const optContainer = document.getElementById('quiz-options');
+            optContainer.innerHTML = '';
+            randomQ.a.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'captcha-option-btn'; btn.innerText = opt;
+                btn.onclick = () => {
+                    if (index === randomQ.correct) {
+                        btn.classList.add('correct');
+                        document.getElementById('btn-l5').disabled = false;
+                        document.getElementById('btn-l5').style.background = 'var(--success)';
+                        captchaSolved[5] = true;
+                        Array.from(optContainer.children).forEach(b => b.disabled = true);
+                    } else {
+                        btn.classList.add('wrong');
+                        redirectTroll('l5', 'Trả lời sai câu hỏi!');
+                    }
+                };
+                optContainer.appendChild(btn);
+            });
         }
 
         async function unlockRaw() {
             if(!captchaSolved[5]) { showError('l5', 'Vui lòng giải Captcha!'); return; }
-            
             const btn = document.getElementById('btn-l5');
             btn.innerText = "Đang mở khóa..."; btn.disabled = true;
             await sleep(1000);
-
             document.querySelectorAll('.layer-container').forEach(el => el.classList.remove('active'));
             
-            document.getElementById('codeBlock').textContent = config.code;
+            let realCode = config.code;
+            if(localStorage.getItem('bagahConfig')) {
+                let savedConfig = JSON.parse(localStorage.getItem('bagahConfig'));
+                if(savedConfig.code.startsWith("ENC_")) {
+                    realCode = decryptPayload(savedConfig.code.replace("ENC_", ""));
+                }
+            }
+            document.getElementById('codeBlock').textContent = realCode;
             document.getElementById('raw-area').style.display = 'block';
             document.getElementById('header-status').textContent = "ACCESS GRANTED";
             document.getElementById('header-status').style.color = "var(--success)";
-            
-            // Hiện nút Admin khi đã vào được Raw
             document.getElementById('admin-btn').style.display = 'block';
         }
 
@@ -417,7 +420,7 @@
             navigator.clipboard.writeText(document.getElementById('codeBlock').textContent).then(() => alert("Đã copy code!"));
         }
 
-        // ADMIN PANEL
+        // ================= ADMIN PANEL =================
         function toggleAdmin() {
             const p = document.getElementById('admin-panel');
             const o = document.getElementById('admin-overlay');
@@ -428,9 +431,91 @@
         function updateAdminUI() {
             document.getElementById('cur-pass').innerText = config.password;
             document.getElementById('cur-ip').innerText = config.ip;
-            document.getElementById('admin-pass').value = config.password;
-            document.getElementById('admin-ip').value = config.ip;
-            document.getElementById('admin-code').value = config.code;
+            let displayCode = config.code;
+            if(displayCode.startsWith("ENC_")) {
+                let dec = decryptPayload(displayCode.replace("ENC_", ""));
+                if(dec) displayCode = dec;
+            }
+            document.getElementById('admin-code').value = displayCode;
+        }
+
+        // NÚT MÃ HÓA NÂNG CAO (CÓ HIỆU ỨNG CHỜ)
+        async function obfuscateAdminCode() {
+            const rawCode = document.getElementById('admin-code').value;
+            if(!rawCode) { alert("Không có code để mã hóa!"); return; }
+
+            const btn = document.getElementById('btn-obfuscate');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳ Đang mã hóa..."; btn.disabled = true;
+            btn.style.background = "#666";
+
+            await sleep(1500); // Thời gian chờ giả lập
+
+            // 1. Chuyển code thành mảng các ký tự
+            let charCodes = [];
+            for (let i = 0; i < rawCode.length; i++) {
+                charCodes.push(rawCode.charCodeAt(i) + 100 + Math.floor(Math.random() * 400));
+            }
+
+            // 2. Xáo trộn mảng
+            for (let i = charCodes.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [charCodes[i], charCodes[j]] = [charCodes[j], charCodes[i]];
+            }
+
+            const arrayLength = charCodes.length;
+            const secretSalt = Math.floor(Math.random() * 999999);
+            const packedData = JSON.stringify(charCodes);
+
+            // 3. Tạo Wrapper Luau
+            const obfuscatedLuau = `-- Protected by System Vault (Anti-Reverse)
+-- WARNING: Do not modify or share this script.
+local _packed = ${packedData}
+local _len = ${arrayLength}
+local _salt = ${secretSalt}
+local _buffer = {}
+local function _unpack(_val) return string.char((_val - 100 - (_salt % 300)) % 256) end
+for _i, _v in ipairs(_packed) do _buffer[_i] = _unpack(_v) end
+local _decoded = table.concat(_buffer)
+_buffer = nil; _packed = nil; _salt = nil;
+local _func, _err = loadstring(_decoded)
+_decoded = nil;
+if _func then _func() else warn("[System Vault] Lỗi giải mã bảo vệ: " .. tostring(_err)) end`;
+
+            document.getElementById('admin-code').value = obfuscatedLuau;
+            
+            btn.innerText = "✅ Mã Hóa Thành Công!";
+            btn.style.background = "var(--success)";
+            await sleep(1500);
+            
+            btn.innerText = originalText;
+            btn.style.background = "#3b82f6";
+            btn.disabled = false;
+        }
+
+        // NÚT DOWNLOAD CODE (.TXT)
+        function downloadCode() {
+            const codeContent = document.getElementById('admin-code').value;
+            if(!codeContent) { alert("Không có code để tải xuống!"); return; }
+
+            // Tạo đối tượng Blob chứa nội dung code
+            const blob = new Blob([codeContent], { type: 'text/plain' });
+            
+            // Tạo link ảo để tải xuống
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            // Tên file tải về
+            a.download = 'obfuscated_code.txt'; 
+            
+            document.body.appendChild(a);
+            a.click();
+            
+            // Dọn dẹp
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         }
 
         function saveAdmin() {
@@ -439,10 +524,10 @@
             const newCode = document.getElementById('admin-code').value;
 
             if(!newPass || !newIP || !newCode) { alert("Vui lòng nhập đủ thông tin!"); return; }
-
-            config = { password: newPass, ip: newIP, code: newCode };
+            const encryptedCode = "ENC_" + encryptDecrypt(newCode);
+            config = { password: newPass, ip: newIP, code: encryptedCode };
             localStorage.setItem('bagahConfig', JSON.stringify(config));
-            alert("✅ Đã lưu cấu hình! Trang web sẽ tải lại.");
+            alert("✅ Đã lưu cấu hình! Code đã được mã hóa an toàn. Trang sẽ tải lại.");
             location.reload(); 
         }
     </script>
