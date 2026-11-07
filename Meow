@@ -1,5 +1,6 @@
 -- ==========================================================
 -- AUTO TELEPORT TO ALL NEXT-BOTS - STANDALONE GUI
+-- Có lưu vị trí cũ và teleport về khi tắt
 -- ==========================================================
 
 local Players = game:GetService("Players")
@@ -53,7 +54,6 @@ TopBar.Parent = MainFrame
 local TopCorner = Instance.new("UICorner")
 TopCorner.CornerRadius = UDim.new(0, 12)
 TopCorner.Parent = TopBar
--- Che góc dưới của topbar
 local TopFill = Instance.new("Frame")
 TopFill.Size = UDim2.new(1, 0, 0, 12)
 TopFill.Position = UDim2.new(0, 0, 1, -12)
@@ -119,6 +119,7 @@ end)
 -- ================== LOGIC QUÉT NEXTBOT & TELEPORT ==================
 local isTeleporting = false
 local teleportConnection = nil
+local originalPosition = nil -- Lưu vị trí cũ khi bật
 
 -- Hàm quét toàn bộ Nextbot hiện có trên map
 local function GetAllNextBots()
@@ -134,11 +135,31 @@ local function GetAllNextBots()
     return bots
 end
 
+-- Hàm Reset GUI về trạng thái OFF
+local function SetGuiOff()
+    isTeleporting = false
+    ToggleBtn.Text = "Auto Teleport to All Next-Bots: OFF"
+    ToggleBtn.BackgroundColor3 = Theme.Panel
+    BtnStroke.Color = Theme.SubText
+    TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {TextColor3 = Theme.Text}):Play()
+    if teleportConnection then
+        teleportConnection:Disconnect()
+        teleportConnection = nil
+    end
+end
+
 -- Bật / Tắt
 ToggleBtn.MouseButton1Click:Connect(function()
-    isTeleporting = not isTeleporting
-    
-    if isTeleporting then
+    if not isTeleporting then
+        -- === BẬT ===
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end -- Không có nhân vật thì không làm gì
+
+        -- Lưu vị trí cũ
+        originalPosition = hrp.CFrame 
+
+        isTeleporting = true
         ToggleBtn.Text = "Auto Teleport to All Next-Bots: ON"
         ToggleBtn.BackgroundColor3 = Theme.Accent
         BtnStroke.Color = Color3.fromRGB(255, 150, 150)
@@ -147,32 +168,38 @@ ToggleBtn.MouseButton1Click:Connect(function()
         -- Bắt đầu vòng lặp teleport
         teleportConnection = RunService.Heartbeat:Connect(function()
             if not isTeleporting then return end
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local c = LocalPlayer.Character
+            local root = c and c:FindFirstChild("HumanoidRootPart")
+            local hum = c and c:FindFirstChildOfClass("Humanoid")
             
-            if hrp and hum and hum.Health > 0 then
+            if root and hum and hum.Health > 0 then
                 local bots = GetAllNextBots()
                 if #bots > 0 then
                     -- Lấy con bot đầu tiên trong danh sách quét được và teleport tới đó
                     local targetBot = bots[1]
                     pcall(function()
-                        hrp.CFrame = CFrame.new(targetBot.Position + Vector3.new(0, 3, 0))
-                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        root.CFrame = CFrame.new(targetBot.Position + Vector3.new(0, 3, 0))
+                        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     end)
                 end
             end
         end)
+        
     else
-        ToggleBtn.Text = "Auto Teleport to All Next-Bots: OFF"
-        ToggleBtn.BackgroundColor3 = Theme.Panel
-        BtnStroke.Color = Theme.SubText
-        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {TextColor3 = Theme.Text}):Play()
+        -- === TẮT ===
+        SetGuiOff()
 
-        -- Dừng vòng lặp
-        if teleportConnection then
-            teleportConnection:Disconnect()
-            teleportConnection = nil
+        -- Tự động teleport về vị trí cũ đã lưu
+        if originalPosition then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function()
+                    hrp.CFrame = originalPosition
+                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                end)
+            end
+            originalPosition = nil -- Xóa bộ nhớ sau khi về
         end
     end
 end)
@@ -180,14 +207,7 @@ end)
 -- Dọn dẹp khi nhân vật chết / respawn
 LocalPlayer.CharacterAdded:Connect(function()
     if isTeleporting then
-        isTeleporting = false
-        ToggleBtn.Text = "Auto Teleport to All Next-Bots: OFF"
-        ToggleBtn.BackgroundColor3 = Theme.Panel
-        BtnStroke.Color = Theme.SubText
-        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {TextColor3 = Theme.Text}):Play()
-        if teleportConnection then
-            teleportConnection:Disconnect()
-            teleportConnection = nil
-        end
+        SetGuiOff()
+        originalPosition = nil
     end
 end)
