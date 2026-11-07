@@ -1,0 +1,193 @@
+-- ==========================================================
+-- AUTO TELEPORT TO ALL NEXT-BOTS - STANDALONE GUI
+-- ==========================================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Theme
+local Theme = {
+    Background = Color3.fromRGB(15, 18, 25),
+    Panel = Color3.fromRGB(22, 26, 35),
+    Accent = Color3.fromRGB(255, 60, 60),
+    Text = Color3.fromRGB(255, 255, 255),
+    SubText = Color3.fromRGB(150, 160, 180),
+}
+
+-- ================== TẠO GUI ==================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NextBotTeleportGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.DisplayOrder = 999
+ScreenGui.Parent = PlayerGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 260, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -130, 0.1, 0)
+MainFrame.BackgroundColor3 = Theme.Background
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Theme.Accent
+UIStroke.Thickness = 2
+UIStroke.Transparency = 0.2
+UIStroke.Parent = MainFrame
+
+-- Thanh tiêu đề (Kéo thả)
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 30)
+TopBar.BackgroundColor3 = Theme.Panel
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+local TopCorner = Instance.new("UICorner")
+TopCorner.CornerRadius = UDim.new(0, 12)
+TopCorner.Parent = TopBar
+-- Che góc dưới của topbar
+local TopFill = Instance.new("Frame")
+TopFill.Size = UDim2.new(1, 0, 0, 12)
+TopFill.Position = UDim2.new(0, 0, 1, -12)
+TopFill.BackgroundColor3 = Theme.Panel
+TopFill.BorderSizePixel = 0
+TopFill.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "🤖 Nextbot Teleport"
+Title.TextColor3 = Theme.Text
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 13
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+-- Nút Toggle
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(1, -30, 0, 40)
+ToggleBtn.Position = UDim2.new(0, 15, 0, 40)
+ToggleBtn.BackgroundColor3 = Theme.Panel
+ToggleBtn.Text = "Auto Teleport to All Next-Bots: OFF"
+ToggleBtn.TextColor3 = Theme.Text
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 12
+ToggleBtn.AutoButtonColor = false
+ToggleBtn.BorderSizePixel = 0
+ToggleBtn.Parent = MainFrame
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 8)
+BtnCorner.Parent = ToggleBtn
+local BtnStroke = Instance.new("UIStroke")
+BtnStroke.Color = Theme.SubText
+BtnStroke.Thickness = 1
+BtnStroke.Parent = ToggleBtn
+
+-- Kéo thả GUI
+local dragging, dragInput, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- ================== LOGIC QUÉT NEXTBOT & TELEPORT ==================
+local isTeleporting = false
+local teleportConnection = nil
+
+-- Hàm quét toàn bộ Nextbot hiện có trên map
+local function GetAllNextBots()
+    local bots = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:GetAttribute("Team") == "Nextbot" then
+            local root = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("UpperTorso") or obj:FindFirstChild("Torso") or obj.PrimaryPart
+            if root then
+                table.insert(bots, root)
+            end
+        end
+    end
+    return bots
+end
+
+-- Bật / Tắt
+ToggleBtn.MouseButton1Click:Connect(function()
+    isTeleporting = not isTeleporting
+    
+    if isTeleporting then
+        ToggleBtn.Text = "Auto Teleport to All Next-Bots: ON"
+        ToggleBtn.BackgroundColor3 = Theme.Accent
+        BtnStroke.Color = Color3.fromRGB(255, 150, 150)
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {TextColor3 = Color3.new(1,1,1)}):Play()
+
+        -- Bắt đầu vòng lặp teleport
+        teleportConnection = RunService.Heartbeat:Connect(function()
+            if not isTeleporting then return end
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            if hrp and hum and hum.Health > 0 then
+                local bots = GetAllNextBots()
+                if #bots > 0 then
+                    -- Lấy con bot đầu tiên trong danh sách quét được và teleport tới đó
+                    local targetBot = bots[1]
+                    pcall(function()
+                        hrp.CFrame = CFrame.new(targetBot.Position + Vector3.new(0, 3, 0))
+                        hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    end)
+                end
+            end
+        end)
+    else
+        ToggleBtn.Text = "Auto Teleport to All Next-Bots: OFF"
+        ToggleBtn.BackgroundColor3 = Theme.Panel
+        BtnStroke.Color = Theme.SubText
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {TextColor3 = Theme.Text}):Play()
+
+        -- Dừng vòng lặp
+        if teleportConnection then
+            teleportConnection:Disconnect()
+            teleportConnection = nil
+        end
+    end
+end)
+
+-- Dọn dẹp khi nhân vật chết / respawn
+LocalPlayer.CharacterAdded:Connect(function()
+    if isTeleporting then
+        isTeleporting = false
+        ToggleBtn.Text = "Auto Teleport to All Next-Bots: OFF"
+        ToggleBtn.BackgroundColor3 = Theme.Panel
+        BtnStroke.Color = Theme.SubText
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.2), {TextColor3 = Theme.Text}):Play()
+        if teleportConnection then
+            teleportConnection:Disconnect()
+            teleportConnection = nil
+        end
+    end
+end)
