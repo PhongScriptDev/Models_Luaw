@@ -1,239 +1,279 @@
 -- ============================================
---  WHITELIST PRO + AUTO RE-CHECK + AUTO F9
---  Format: [Universe ID] = "raw url"
+-- AUDIO PLAYER + SCRIPT LOADER SAVER
 -- ============================================
 
-local Players      = game:GetService("Players")
-local StarterGui   = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local VIM          = game:GetService("VirtualInputManager")
-local LocalPlayer  = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
 
--- ⚙️ CẤU HÌNH
-local MUSIC_ID     = "rbxassetid://1837879082"
-local DEBUG        = true
-local RECHECK_TIME = 10 -- giây
+local player = Players.LocalPlayer
 
--- 📋 Danh sách hỗ trợ
-local SUPPORTED_GAMES = {
-    [994732206]  = "none",
-    [6162020898] = "https://raw.githubusercontent.com/yourname/hub/main/evade.lua",
-}
+-- Xóa GUI cũ nếu có
+pcall(function() CoreGui.ManaPlayerGui:Destroy() end)
+pcall(function() player.PlayerGui.ManaPlayerGui:Destroy() end)
 
--- ============================
--- 🖥️ MÔ PHỎNG F9 (MỞ CONSOLE ROBLOX)
--- ============================
-local function openRobloxConsole()
-    local ok, err = pcall(function()
-        -- Gửi keydown F9
-        VIM:SendKeyEvent(true, Enum.KeyCode.F9, false, game)
-        task.wait(0.1)
-        -- Gửi keyup F9
-        VIM:SendKeyEvent(false, Enum.KeyCode.F9, false, game)
+local gui = Instance.new("ScreenGui")
+gui.Name = "ManaPlayerGui"
+gui.ResetOnSpawn = false
+local ok = pcall(function() gui.Parent = CoreGui end)
+if not ok or not gui.Parent then gui.Parent = player:WaitForChild("PlayerGui") end
+
+-- === KHUNG CHÍNH ===
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromOffset(360, 360) -- Tăng chiều cao để chứa thêm ô nhập
+frame.Position = UDim2.new(0.5, -180, 0.5, -180)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(0, 170, 255)
+stroke.Thickness = 2
+stroke.Transparency = 0.3
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "🎵 Mana Audio & Loader"
+title.TextColor3 = Color3.fromRGB(0, 200, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+Instance.new("UIPadding", title).PaddingTop = UDim.new(0, 8)
+
+-- ==========================================
+-- PHẦN 1: AUDIO PLAYER
+-- ==========================================
+local audioTitle = Instance.new("TextLabel", frame)
+audioTitle.Size = UDim2.new(1, -40, 0, 20)
+audioTitle.Position = UDim2.new(0, 20, 0, 45)
+audioTitle.BackgroundTransparency = 1
+audioTitle.Text = "Audio Link (.mp3):"
+audioTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+audioTitle.TextSize = 14
+audioTitle.Font = Enum.Font.Gotham
+audioTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local inputBox = Instance.new("TextBox", frame)
+inputBox.Size = UDim2.new(1, -40, 0, 40)
+inputBox.Position = UDim2.new(0, 20, 0, 70)
+inputBox.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+inputBox.TextColor3 = Color3.new(1, 1, 1)
+inputBox.PlaceholderText = "Dán link .mp3..."
+inputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+inputBox.Text = ""
+inputBox.TextSize = 14
+inputBox.Font = Enum.Font.Gotham
+inputBox.TextXAlignment = Enum.TextXAlignment.Left
+inputBox.ClearTextOnFocus = false
+Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 8)
+
+local loadBtn = Instance.new("TextButton", frame)
+loadBtn.Size = UDim2.new(1, -40, 0, 35)
+loadBtn.Position = UDim2.new(0, 20, 0, 120)
+loadBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+loadBtn.Text = "📥 Tải & Phát Nhạc"
+loadBtn.TextColor3 = Color3.new(1, 1, 1)
+loadBtn.TextSize = 16
+loadBtn.Font = Enum.Font.GothamBold
+loadBtn.AutoButtonColor = false
+Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0, 8)
+
+local toggleBg = Instance.new("Frame", frame)
+toggleBg.Size = UDim2.fromOffset(60, 30)
+toggleBg.Position = UDim2.new(0, 20, 0, 170)
+toggleBg.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(1, 0)
+
+local toggleKnob = Instance.new("Frame", toggleBg)
+toggleKnob.Size = UDim2.fromOffset(24, 24)
+toggleKnob.Position = UDim2.new(0, 3, 0.5, -12)
+toggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", toggleKnob).CornerRadius = UDim.new(1, 0)
+
+local toggleBtn = Instance.new("TextButton", toggleBg)
+toggleBtn.Size = UDim2.fromScale(1, 1)
+toggleBtn.BackgroundTransparency = 1
+toggleBtn.Text = ""
+
+local statusLabel = Instance.new("TextLabel", frame)
+statusLabel.Size = UDim2.new(1, -110, 0, 30)
+statusLabel.Position = UDim2.new(0, 100, 0, 170)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "🔇 Đang tắt"
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.TextSize = 15
+statusLabel.Font = Enum.Font.GothamMedium
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+-- ==========================================
+-- PHẦN 2: SCRIPT LOADER SAVER
+-- ==========================================
+local scriptTitle = Instance.new("TextLabel", frame)
+scriptTitle.Size = UDim2.new(1, -40, 0, 20)
+scriptTitle.Position = UDim2.new(0, 20, 0, 210)
+scriptTitle.BackgroundTransparency = 1
+scriptTitle.Text = "Lưu Script Loader vào Mana/script.txt:"
+scriptTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+scriptTitle.TextSize = 14
+scriptTitle.Font = Enum.Font.Gotham
+scriptTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local scriptInput = Instance.new("TextBox", frame)
+scriptInput.Size = UDim2.new(1, -40, 0, 55)
+scriptInput.Position = UDim2.new(0, 20, 0, 235)
+scriptInput.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+scriptInput.TextColor3 = Color3.new(1, 1, 1)
+scriptInput.PlaceholderText = "Dán code loadstring(...) hoặc getgenv() vào đây..."
+scriptInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+scriptInput.Text = ""
+scriptInput.TextSize = 12
+scriptInput.Font = Enum.Font.Code
+scriptInput.TextXAlignment = Enum.TextXAlignment.Left
+scriptInput.TextYAlignment = Enum.TextYAlignment.Top
+scriptInput.TextWrapped = true
+scriptInput.ClearTextOnFocus = false
+Instance.new("UICorner", scriptInput).CornerRadius = UDim.new(0, 8)
+
+local saveScriptBtn = Instance.new("TextButton", frame)
+saveScriptBtn.Size = UDim2.new(1, -40, 0, 35)
+saveScriptBtn.Position = UDim2.new(0, 20, 0, 300)
+saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+saveScriptBtn.Text = "💾 Lưu Code"
+saveScriptBtn.TextColor3 = Color3.new(1, 1, 1)
+saveScriptBtn.TextSize = 16
+saveScriptBtn.Font = Enum.Font.GothamBold
+saveScriptBtn.AutoButtonColor = false
+Instance.new("UICorner", saveScriptBtn).CornerRadius = UDim.new(0, 8)
+
+-- ==========================================
+-- LOGIC XỬ LÝ
+-- ==========================================
+
+local sound = Instance.new("Sound")
+sound.Name = "CustomAudio"
+sound.Volume = 0.5
+sound.Looped = true
+sound.Parent = SoundService
+
+local isPlaying = false
+local hasLoaded = false
+local toggleAnim
+
+local function updateToggleUI(on)
+    if toggleAnim then toggleAnim:Cancel() end
+    local targetPos = on and UDim2.new(1, -27, 0.5, -12) or UDim2.new(0, 3, 0.5, -12)
+    local targetColor = on and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
+    
+    toggleAnim = TweenService:Create(toggleKnob, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = targetPos})
+    toggleAnim:Play()
+    TweenService:Create(toggleBg, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+    
+    statusLabel.Text = on and "🔊 Đang phát" or "🔇 Đang tắt"
+    statusLabel.TextColor3 = on and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(200, 200, 200)
+end
+
+-- Xử lý Tải Nhạc
+loadBtn.MouseButton1Click:Connect(function()
+    local url = inputBox.Text:gsub("%s+", "")
+    if url == "" then return end
+    
+    sound:Stop()
+    isPlaying = false
+    updateToggleUI(false)
+    
+    statusLabel.Text = "⏳ Đang tải..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+    
+    local success, err = pcall(function()
+        local tempPath = "audio_temp.mp3"
+        local body = game:HttpGet(url)
+        
+        if not body or #body < 1000 then
+            error("File rỗng hoặc bị chặn!")
+        end
+        
+        writefile(tempPath, body)
+        local assetId = getcustomasset(tempPath)
+        sound.SoundId = assetId
     end)
-
-    if ok then
-        print("[F9] Đã gửi phím F9 mở Console")
+    
+    if success then
+        hasLoaded = true
+        statusLabel.Text = "✅ Đã tải, bật toggle!"
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
     else
-        warn("[F9] Không mô phỏng được F9:", err)
-    end
-
-    return ok
-end
-
--- ============================
--- 🔧 HÀM LOG
--- ============================
-local function log(tag, ...)
-    if not DEBUG then return end
-    print("["..tag:upper().."]", ...)
-end
-
--- ============================
--- 🔔 NOTIFY
--- ============================
-local function notify(title, text, duration)
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = title or "Thông báo",
-            Text = text or "",
-            Duration = duration or 5,
-        })
-    end)
-end
-
--- ============================
--- 🎵 NHẠC
--- ============================
-local function playMusic()
-    pcall(function()
-        local s = Instance.new("Sound")
-        s.SoundId = MUSIC_ID
-        s.Volume = 0.5
-        s.Parent = SoundService
-        s:Play()
-        s.Ended:Connect(function() s:Destroy() end)
-    end)
-end
-
--- ============================
--- 🎯 TRẠNG THÁI
--- ============================
-local STATE = {
-    lastId     = nil,
-    loadedId   = nil,
-    isRunning  = true,
-    checkCount = 0,
-    startTime  = os.time(),
-}
-
--- ============================
--- 🔍 LẤY UNIVERSE ID
--- ============================
-local function getUniverseId()
-    if not game:IsLoaded() then
-        log("info", "Đợi game load...")
-        local loaded = false
-        task.spawn(function()
-            game.Loaded:Wait()
-            loaded = true
-        end)
-        local t = 0
-        while not loaded and t < 10 do
-            task.wait(0.2)
-            t = t + 0.2
-        end
-    end
-
-    local maxWait = 30
-    local waited = 0
-    while waited < maxWait do
-        local id = game.GameId
-        if id and id ~= 0 then return id end
-        task.wait(0.5)
-        waited = waited + 0.5
-    end
-    return 0
-end
-
--- ============================
--- 🚀 XỬ LÝ CHECK
--- ============================
-local function processCheck(isFirstTime)
-    local universeId = getUniverseId()
-
-    log("check", "Bắt đầu check #"..STATE.checkCount)
-    log("check", "Universe ID:", universeId)
-
-    if universeId == 0 then
-        log("error", "Không đọc được Universe ID!")
-        if isFirstTime then
-            notify("⚠️ Lỗi", "Không đọc được Universe ID!", 8)
-        end
-        return
-    end
-
-    if STATE.lastId == universeId then
-        log("info", "ID không đổi ("..universeId.."), bỏ qua")
-        return
-    end
-
-    log("info", "ID mới phát hiện:", universeId)
-    STATE.lastId = universeId
-
-    local url = SUPPORTED_GAMES[universeId]
-
-    if not url then
-        log("warn", "ID "..universeId.." KHÔNG có trong bảng hỗ trợ")
-        notify(
-            "❗ Không phải game",
-            "❌ Từ chối loading\nUniverse ID: "..tostring(universeId),
-            8
-        )
-        STATE.loadedId = nil
-        return
-    end
-
-    log("success", "ID "..universeId.." CÓ trong bảng hỗ trợ")
-
-    if STATE.loadedId == universeId then
-        log("info", "Đã load ID "..universeId.." rồi, bỏ qua")
-        return
-    end
-
-    notify("✔️ Game hỗ trợ", "⏳ Đang loading script...", 5)
-    task.wait(2)
-
-    log("load", "Đang tải script từ:", url)
-
-    local ok, err = pcall(function()
-        local code = game:HttpGet(url)
-        if not code or #code < 10 then
-            error("Link rỗng hoặc lỗi 404")
-        end
-        loadstring(code)()
-    end)
-
-    if ok then
-        STATE.loadedId = universeId
-        log("success", "Đã load thành công ID:", universeId)
-    else
-        log("error", "Lỗi load:", err)
-        notify("❌ Lỗi tải script", tostring(err), 8)
-    end
-end
-
--- ============================
--- 🚀 MAIN
--- ============================
-
--- 1. TỰ ĐỘNG MỞ F9
-openRobloxConsole()
-task.wait(0.5)
-
--- 2. Nhạc
-playMusic()
-log("info", "Đã phát nhạc khởi động")
-
--- 3. Đếm bảng
-local count = 0
-for _ in pairs(SUPPORTED_GAMES) do count = count + 1 end
-log("info", "Số game trong bảng hỗ trợ:", count)
-
-if count == 0 then
-    log("error", "Bảng SUPPORTED_GAMES rỗng!")
-    notify("⚠️ Lỗi cấu hình", "Bảng SUPPORTED_GAMES đang rỗng!", 8)
-    return
-end
-
--- 4. In danh sách hỗ trợ
-log("info", "=== DANH SÁCH HỖ TRỢ ===")
-for id, url in pairs(SUPPORTED_GAMES) do
-    log("info", "🎮 "..id.." -> "..url:sub(1, 50).."...")
-end
-
--- 5. Notify bắt đầu
-notify(
-    "🔎 Đang kiểm tra Universe ID...",
-    "🕑 Xin vui lòng đợi, để kiểm tra có phải game hỗ trợ?",
-    5
-)
-
-task.wait(4)
-
--- 6. Check lần đầu
-STATE.checkCount = STATE.checkCount + 1
-processCheck(true)
-
--- 7. Loop re-check
-task.spawn(function()
-    while STATE.isRunning do
-        task.wait(RECHECK_TIME)
-        STATE.checkCount = STATE.checkCount + 1
-        pcall(function()
-            processCheck(false)
-        end)
+        warn("Lỗi:", err)
+        statusLabel.Text = "❌ Lỗi tải link!"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
     end
 end)
 
-log("info", "Đã bật auto re-check mỗi "..RECHECK_TIME.." giây")
+-- Xử lý Toggle
+toggleBtn.MouseButton1Click:Connect(function()
+    if not hasLoaded then
+        statusLabel.Text = "⚠️ Chưa có nhạc!"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
+        return
+    end
+    
+    isPlaying = not isPlaying
+    updateToggleUI(isPlaying)
+    
+    if isPlaying then
+        sound:Play()
+    else
+        sound:Stop()
+    end
+end)
+
+-- Xử lý Lưu Script (Tạo thư mục Mana & file script.txt)
+saveScriptBtn.MouseButton1Click:Connect(function()
+    local rawText = scriptInput.Text
+    if rawText == "" then return end
+    
+    -- Kiểm tra và tạo thư mục "Mana"
+    if not isfolder("Mana") then
+        makefolder("Mana")
+    end
+    
+    -- Đường dẫn file
+    local filePath = "Mana/script.txt"
+    
+    -- Tự động trích xuất link trong game:HttpGet(...)
+    local extractedLink = "Không tìm thấy link"
+    local foundLink = rawText:match('game:HttpGet%("([^"]+)"%)')
+    if foundLink then
+        extractedLink = foundLink
+    end
+    
+    -- Ghi toàn bộ nội dung vào file script.txt
+    local success, err = pcall(function()
+        writefile(filePath, rawText)
+    end)
+    
+    if success then
+        saveScriptBtn.Text = "✅ Đã lưu thành công!"
+        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
+        print("[Mana] Đã lưu code vào " .. filePath)
+        print("[Mana] Link trích xuất được: " .. extractedLink)
+        
+        task.wait(2)
+        saveScriptBtn.Text = "💾 Lưu Code"
+        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+        scriptInput.Text = ""
+    else
+        saveScriptBtn.Text = "❌ Lỗi khi lưu!"
+        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        warn("Lỗi lưu file:", err)
+        
+        task.wait(2)
+        saveScriptBtn.Text = "💾 Lưu Code"
+        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    end
+end)
+
+updateToggleUI(false)
