@@ -1,279 +1,64 @@
 -- ============================================
--- AUDIO PLAYER + SCRIPT LOADER SAVER
+-- TỰ ĐỘNG BẮT LINK & PHÁT NHẠC (AUTO)
+-- Không GUI, không nút, tự chạy 100%
 -- ============================================
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
-local CoreGui = game:GetService("CoreGui")
 
-local player = Players.LocalPlayer
+-- 1. Tự động lấy nội dung của đoạn code mày vừa Execute
+local rawCode = debug.getinfo(1, "s").source
+local executedLink = ""
 
--- Xóa GUI cũ nếu có
-pcall(function() CoreGui.ManaPlayerGui:Destroy() end)
-pcall(function() player.PlayerGui.ManaPlayerGui:Destroy() end)
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "ManaPlayerGui"
-gui.ResetOnSpawn = false
-local ok = pcall(function() gui.Parent = CoreGui end)
-if not ok or not gui.Parent then gui.Parent = player:WaitForChild("PlayerGui") end
-
--- === KHUNG CHÍNH ===
-local frame = Instance.new("Frame")
-frame.Size = UDim2.fromOffset(360, 360) -- Tăng chiều cao để chứa thêm ô nhập
-frame.Position = UDim2.new(0.5, -180, 0.5, -180)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
-frame.Parent = gui
-
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
-local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(0, 170, 255)
-stroke.Thickness = 2
-stroke.Transparency = 0.3
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundTransparency = 1
-title.Text = "🎵 Mana Audio & Loader"
-title.TextColor3 = Color3.fromRGB(0, 200, 255)
-title.TextScaled = true
-title.Font = Enum.Font.GothamBold
-Instance.new("UIPadding", title).PaddingTop = UDim.new(0, 8)
-
--- ==========================================
--- PHẦN 1: AUDIO PLAYER
--- ==========================================
-local audioTitle = Instance.new("TextLabel", frame)
-audioTitle.Size = UDim2.new(1, -40, 0, 20)
-audioTitle.Position = UDim2.new(0, 20, 0, 45)
-audioTitle.BackgroundTransparency = 1
-audioTitle.Text = "Audio Link (.mp3):"
-audioTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-audioTitle.TextSize = 14
-audioTitle.Font = Enum.Font.Gotham
-audioTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local inputBox = Instance.new("TextBox", frame)
-inputBox.Size = UDim2.new(1, -40, 0, 40)
-inputBox.Position = UDim2.new(0, 20, 0, 70)
-inputBox.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-inputBox.TextColor3 = Color3.new(1, 1, 1)
-inputBox.PlaceholderText = "Dán link .mp3..."
-inputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-inputBox.Text = ""
-inputBox.TextSize = 14
-inputBox.Font = Enum.Font.Gotham
-inputBox.TextXAlignment = Enum.TextXAlignment.Left
-inputBox.ClearTextOnFocus = false
-Instance.new("UICorner", inputBox).CornerRadius = UDim.new(0, 8)
-
-local loadBtn = Instance.new("TextButton", frame)
-loadBtn.Size = UDim2.new(1, -40, 0, 35)
-loadBtn.Position = UDim2.new(0, 20, 0, 120)
-loadBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-loadBtn.Text = "📥 Tải & Phát Nhạc"
-loadBtn.TextColor3 = Color3.new(1, 1, 1)
-loadBtn.TextSize = 16
-loadBtn.Font = Enum.Font.GothamBold
-loadBtn.AutoButtonColor = false
-Instance.new("UICorner", loadBtn).CornerRadius = UDim.new(0, 8)
-
-local toggleBg = Instance.new("Frame", frame)
-toggleBg.Size = UDim2.fromOffset(60, 30)
-toggleBg.Position = UDim2.new(0, 20, 0, 170)
-toggleBg.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(1, 0)
-
-local toggleKnob = Instance.new("Frame", toggleBg)
-toggleKnob.Size = UDim2.fromOffset(24, 24)
-toggleKnob.Position = UDim2.new(0, 3, 0.5, -12)
-toggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", toggleKnob).CornerRadius = UDim.new(1, 0)
-
-local toggleBtn = Instance.new("TextButton", toggleBg)
-toggleBtn.Size = UDim2.fromScale(1, 1)
-toggleBtn.BackgroundTransparency = 1
-toggleBtn.Text = ""
-
-local statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Size = UDim2.new(1, -110, 0, 30)
-statusLabel.Position = UDim2.new(0, 100, 0, 170)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "🔇 Đang tắt"
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.TextSize = 15
-statusLabel.Font = Enum.Font.GothamMedium
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- ==========================================
--- PHẦN 2: SCRIPT LOADER SAVER
--- ==========================================
-local scriptTitle = Instance.new("TextLabel", frame)
-scriptTitle.Size = UDim2.new(1, -40, 0, 20)
-scriptTitle.Position = UDim2.new(0, 20, 0, 210)
-scriptTitle.BackgroundTransparency = 1
-scriptTitle.Text = "Lưu Script Loader vào Mana/script.txt:"
-scriptTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-scriptTitle.TextSize = 14
-scriptTitle.Font = Enum.Font.Gotham
-scriptTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local scriptInput = Instance.new("TextBox", frame)
-scriptInput.Size = UDim2.new(1, -40, 0, 55)
-scriptInput.Position = UDim2.new(0, 20, 0, 235)
-scriptInput.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-scriptInput.TextColor3 = Color3.new(1, 1, 1)
-scriptInput.PlaceholderText = "Dán code loadstring(...) hoặc getgenv() vào đây..."
-scriptInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-scriptInput.Text = ""
-scriptInput.TextSize = 12
-scriptInput.Font = Enum.Font.Code
-scriptInput.TextXAlignment = Enum.TextXAlignment.Left
-scriptInput.TextYAlignment = Enum.TextYAlignment.Top
-scriptInput.TextWrapped = true
-scriptInput.ClearTextOnFocus = false
-Instance.new("UICorner", scriptInput).CornerRadius = UDim.new(0, 8)
-
-local saveScriptBtn = Instance.new("TextButton", frame)
-saveScriptBtn.Size = UDim2.new(1, -40, 0, 35)
-saveScriptBtn.Position = UDim2.new(0, 20, 0, 300)
-saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-saveScriptBtn.Text = "💾 Lưu Code"
-saveScriptBtn.TextColor3 = Color3.new(1, 1, 1)
-saveScriptBtn.TextSize = 16
-saveScriptBtn.Font = Enum.Font.GothamBold
-saveScriptBtn.AutoButtonColor = false
-Instance.new("UICorner", saveScriptBtn).CornerRadius = UDim.new(0, 8)
-
--- ==========================================
--- LOGIC XỬ LÝ
--- ==========================================
-
-local sound = Instance.new("Sound")
-sound.Name = "CustomAudio"
-sound.Volume = 0.5
-sound.Looped = true
-sound.Parent = SoundService
-
-local isPlaying = false
-local hasLoaded = false
-local toggleAnim
-
-local function updateToggleUI(on)
-    if toggleAnim then toggleAnim:Cancel() end
-    local targetPos = on and UDim2.new(1, -27, 0.5, -12) or UDim2.new(0, 3, 0.5, -12)
-    local targetColor = on and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(80, 80, 80)
+if rawCode then
+    rawCode = rawCode:gsub("^@", "") -- Làm sạch chuỗi
     
-    toggleAnim = TweenService:Create(toggleKnob, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = targetPos})
-    toggleAnim:Play()
-    TweenService:Create(toggleBg, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
+    -- 2. Tự động tìm link nằm trong game:HttpGet("...")
+    local foundLink = rawCode:match('game:HttpGet%("([^"]+)"%)')
     
-    statusLabel.Text = on and "🔊 Đang phát" or "🔇 Đang tắt"
-    statusLabel.TextColor3 = on and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(200, 200, 200)
-end
-
--- Xử lý Tải Nhạc
-loadBtn.MouseButton1Click:Connect(function()
-    local url = inputBox.Text:gsub("%s+", "")
-    if url == "" then return end
-    
-    sound:Stop()
-    isPlaying = false
-    updateToggleUI(false)
-    
-    statusLabel.Text = "⏳ Đang tải..."
-    statusLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-    
-    local success, err = pcall(function()
-        local tempPath = "audio_temp.mp3"
-        local body = game:HttpGet(url)
+    if foundLink then
+        executedLink = foundLink
+        print("[Mana] Đã tự động bắt được link: " .. executedLink)
         
-        if not body or #body < 1000 then
-            error("File rỗng hoặc bị chặn!")
+        -- 3. Tự động tạo thư mục Mana và lưu link vào script.txt
+        if not isfolder("Mana") then
+            makefolder("Mana")
         end
         
-        writefile(tempPath, body)
-        local assetId = getcustomasset(tempPath)
-        sound.SoundId = assetId
-    end)
-    
-    if success then
-        hasLoaded = true
-        statusLabel.Text = "✅ Đã tải, bật toggle!"
-        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+        writefile("Mana/script.txt", executedLink)
+        print("[Mana] Đã lưu link vào Mana/script.txt")
     else
-        warn("Lỗi:", err)
-        statusLabel.Text = "❌ Lỗi tải link!"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        warn("[Mana] Không tìm thấy link game:HttpGet trong script vừa Execute!")
     end
-end)
+end
 
--- Xử lý Toggle
-toggleBtn.MouseButton1Click:Connect(function()
-    if not hasLoaded then
-        statusLabel.Text = "⚠️ Chưa có nhạc!"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-        return
-    end
+-- 4. Tự động tải và phát nhạc nếu link bắt được là file .mp3
+if executedLink ~= "" and executedLink:match("%.mp3") then
+    print("[Mana] Phát hiện link MP3, đang tải và phát nhạc...")
     
-    isPlaying = not isPlaying
-    updateToggleUI(isPlaying)
-    
-    if isPlaying then
-        sound:Play()
-    else
-        sound:Stop()
-    end
-end)
-
--- Xử lý Lưu Script (Tạo thư mục Mana & file script.txt)
-saveScriptBtn.MouseButton1Click:Connect(function()
-    local rawText = scriptInput.Text
-    if rawText == "" then return end
-    
-    -- Kiểm tra và tạo thư mục "Mana"
-    if not isfolder("Mana") then
-        makefolder("Mana")
-    end
-    
-    -- Đường dẫn file
-    local filePath = "Mana/script.txt"
-    
-    -- Tự động trích xuất link trong game:HttpGet(...)
-    local extractedLink = "Không tìm thấy link"
-    local foundLink = rawText:match('game:HttpGet%("([^"]+)"%)')
-    if foundLink then
-        extractedLink = foundLink
-    end
-    
-    -- Ghi toàn bộ nội dung vào file script.txt
     local success, err = pcall(function()
-        writefile(filePath, rawText)
+        local tempPath = "Mana/audio_temp.mp3"
+        local body = game:HttpGet(executedLink) -- Tải nhạc từ link
+        
+        if body and #body > 1000 then
+            writefile(tempPath, body)
+            local assetId = getcustomasset(tempPath)
+            
+            -- Tạo Sound và tự động phát
+            local sound = Instance.new("Sound")
+            sound.Name = "ManaAutoAudio"
+            sound.SoundId = assetId
+            sound.Volume = 0.5
+            sound.Looped = true
+            sound.Parent = SoundService
+            
+            sound:Play()
+            print("[Mana] Đang phát nhạc tự động!")
+        end
     end)
     
-    if success then
-        saveScriptBtn.Text = "✅ Đã lưu thành công!"
-        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 50)
-        print("[Mana] Đã lưu code vào " .. filePath)
-        print("[Mana] Link trích xuất được: " .. extractedLink)
-        
-        task.wait(2)
-        saveScriptBtn.Text = "💾 Lưu Code"
-        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        scriptInput.Text = ""
-    else
-        saveScriptBtn.Text = "❌ Lỗi khi lưu!"
-        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        warn("Lỗi lưu file:", err)
-        
-        task.wait(2)
-        saveScriptBtn.Text = "💾 Lưu Code"
-        saveScriptBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    if not success then
+        warn("[Mana] Lỗi tải nhạc: ", err)
     end
-end)
-
-updateToggleUI(false)
+elseif executedLink ~= "" then
+    print("[Mana] Link đã lưu nhưng không phải file .mp3 nên không phát nhạc.")
+end
